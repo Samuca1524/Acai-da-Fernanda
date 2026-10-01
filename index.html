@@ -4,9 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Açaí da Fernanda | Monte seu Pedido</title>
+<meta name="description" content="Monte seu açaí, cupuaçu ou mangaba e peça pelo WhatsApp. Entrega em domicílio!">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Açaí da Fernanda | Monte seu Pedido">
+<meta property="og:description" content="Escolha sabor, tamanho e acompanhamentos e envie seu pedido pelo WhatsApp.">
+<meta property="og:image" content="https://samuca1524.github.io/Acai-da-Fernanda/logo-preview.jpg">
+<meta property="og:url" content="https://samuca1524.github.io/Acai-da-Fernanda/">
+<meta name="twitter:card" content="summary_large_image">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<div id="barra-total"><span>Total: <span id="total-barra" class="preco">R$ 0,00</span></span><button type="button" onclick="document.getElementById('resumo').scrollIntoView({behavior:'smooth',block:'center'})">Ver pedido ↓</button></div>
 <script>
 tailwind.config = {
   theme: {
@@ -39,6 +47,17 @@ tailwind.config = {
   .opcao { background-color: #4A1599; border: 2px solid #5A189A; border-radius: 12px; padding: 12px; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 8px; user-select: none; }
   .opcao:hover { border-color: #7B2CBF; background-color: #5A189A; }
   .opcao.selecionado { border: 3px solid #FACC15; background-color: rgba(250,204,21,0.25); box-shadow: 0 0 14px rgba(250,204,21,0.6); transform: scale(1.02); }
+  .campo-nome { width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: 12px; border: 2px solid #7B2CBF; background: #4A1599; color: #FACC15; font-size: 17px; font-weight: 700; font-family: inherit; outline: none; transition: all .2s; }
+  .campo-nome::placeholder { color: #FACC15; opacity: .5; font-weight: 400; }
+  .campo-nome:focus { border-color: #FACC15; box-shadow: 0 0 10px rgba(250,204,21,.4); }
+  body { padding-bottom: 84px; }
+  .btn-add { width: 100%; padding: 14px; border-radius: 14px; border: 2px dashed #FACC15; background: transparent; color: #2D0C5E; font-weight: 700; font-size: 16px; cursor: pointer; margin-bottom: 24px; }
+  .btn-add:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-add:not(:disabled) { background: #2D0C5E; color: #FACC15; }
+  .copo-box { border: 1px solid #5A189A; border-radius: 12px; padding: 8px 14px; margin-bottom: 10px; background: rgba(255,255,255,.04); }
+  .copo-box .rm { float: right; background: #EF4444; color: #fff; border: none; border-radius: 8px; padding: 2px 10px; cursor: pointer; font-weight: 700; }
+  #barra-total { position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: #2D0C5E; border-top: 3px solid #FACC15; padding: 10px 16px calc(10px + env(safe-area-inset-bottom,0px)); display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+  #barra-total button { background: #FACC15; color: #2D0C5E; border: none; border-radius: 999px; padding: 10px 18px; font-weight: 700; cursor: pointer; }
   .abas-tamanho { display: flex; gap: 8px; margin-bottom: 12px; }
   .aba { flex: 1; padding: 10px 12px; border-radius: 999px; border: 2px solid #5A189A; background: #4A1599; color: #FACC15; font-weight: 700; font-size: 15px; cursor: pointer; transition: all .2s; }
   .aba:hover { border-color: #FACC15; }
@@ -83,7 +102,7 @@ tailwind.config = {
 
 <!-- CABECALHO -->
 <header style="background:#2D0C5E;padding:20px;text-align:center;border-bottom:2px solid #5A189A">
-  <h1 class="titulo" style="font-size:clamp(28px,6vw,44px);margin:0;color:#FACC15">Açaí da Fernanda</h1>
+  <h1 style="margin:0"><span style="display:inline-block;background:#FEDA14;border-radius:18px;padding:6px 14px"><img src="data:image/jpeg;base64,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" alt="Açaí da Fernanda" style="display:block;height:104px;width:auto"></span></h1>
   <p style="color:#FACC15;margin:6px 0 0">Açaí • Cupuaçu • Mangaba — Entrega em domicílio</p>
 </header>
 
@@ -189,11 +208,11 @@ tailwind.config = {
     <h2 class="titulo" style="font-size:22px;margin:0 0 6px">3. Escolha as Frutas</h2>
     <p id="aviso-frutas" style="font-size:13px;color:#FACC15;margin:0 0 12px">Escolha o tamanho primeiro</p>
     <div id="frutas" class="bloqueado" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-      <label class="opcao" data-tipo="fruta" data-nome="Banana"><input type="checkbox" class="chk-fruta" value="Banana" onchange="atualizarLimites()"><span>🍌 Banana</span></label>
-      <label class="opcao" data-tipo="fruta" data-nome="Uva Verde"><input type="checkbox" class="chk-fruta" value="Uva Verde" onchange="atualizarLimites()"><span>🍇 Uva Verde</span></label>
-      <label class="opcao" data-tipo="fruta" data-nome="Morango"><input type="checkbox" class="chk-fruta" value="Morango" onchange="atualizarLimites()"><span>🍓 Morango</span></label>
-      <label class="opcao" data-tipo="fruta" data-nome="Manga"><input type="checkbox" class="chk-fruta" value="Manga" onchange="atualizarLimites()"><span>🥭 Manga</span></label>
-      <label class="opcao" data-tipo="fruta" data-nome="Abacaxi"><input type="checkbox" class="chk-fruta" value="Abacaxi" onchange="atualizarLimites()"><span>🍍 Abacaxi</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Banana"><input type="checkbox" class="chk-fruta" value="Banana" onchange="atualizarLimites(this)"><span>🍌 Banana</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Uva Verde"><input type="checkbox" class="chk-fruta" value="Uva Verde" onchange="atualizarLimites(this)"><span>🍇 Uva Verde</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Morango"><input type="checkbox" class="chk-fruta" value="Morango" onchange="atualizarLimites(this)"><span>🍓 Morango</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Manga"><input type="checkbox" class="chk-fruta" value="Manga" onchange="atualizarLimites(this)"><span>🥭 Manga</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Abacaxi"><input type="checkbox" class="chk-fruta" value="Abacaxi" onchange="atualizarLimites(this)"><span>🍍 Abacaxi</span></label>
     </div>
   </div>
 
@@ -202,15 +221,15 @@ tailwind.config = {
     <h2 class="titulo" style="font-size:22px;margin:0 0 6px">4. Escolha os Acompanhamentos</h2>
     <p id="aviso-acomp" style="font-size:13px;color:#FACC15;margin:0 0 12px">Escolha o tamanho primeiro</p>
     <div id="acompanhamentos" class="bloqueado" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-      <label class="opcao" data-tipo="acomp" data-nome="Leite em Pó"><input type="checkbox" class="chk-acomp" value="Leite em Pó" onchange="atualizarLimites()"><span>🥛 Leite em Pó</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Paçoca"><input type="checkbox" class="chk-acomp" value="Paçoca" onchange="atualizarLimites()"><span>🥜 Paçoca</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Amendoim"><input type="checkbox" class="chk-acomp" value="Amendoim" onchange="atualizarLimites()"><span>🥜 Amendoim</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Ovomaltine"><input type="checkbox" class="chk-acomp" value="Ovomaltine" onchange="atualizarLimites()"><span>🍫 Ovomaltine</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Sucrilhos"><input type="checkbox" class="chk-acomp" value="Sucrilhos" onchange="atualizarLimites()"><span>🥣 Sucrilhos</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Chocoboll"><input type="checkbox" class="chk-acomp" value="Chocoboll" onchange="atualizarLimites()"><span>🍫 Chocoboll</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Granola"><input type="checkbox" class="chk-acomp" value="Granola" onchange="atualizarLimites()"><span>🌾 Granola</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Granulado"><input type="checkbox" class="chk-acomp" value="Granulado" onchange="atualizarLimites()"><span>✨ Granulado</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Confete"><input type="checkbox" class="chk-acomp" value="Confete" onchange="atualizarLimites()"><span>🎉 Confete</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Leite em Pó"><input type="checkbox" class="chk-acomp" value="Leite em Pó" onchange="atualizarLimites(this)"><span>🥛 Leite em Pó</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Paçoca"><input type="checkbox" class="chk-acomp" value="Paçoca" onchange="atualizarLimites(this)"><span>🥜 Paçoca</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Amendoim"><input type="checkbox" class="chk-acomp" value="Amendoim" onchange="atualizarLimites(this)"><span>🥜 Amendoim</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Ovomaltine"><input type="checkbox" class="chk-acomp" value="Ovomaltine" onchange="atualizarLimites(this)"><span>🍫 Ovomaltine</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Sucrilhos"><input type="checkbox" class="chk-acomp" value="Sucrilhos" onchange="atualizarLimites(this)"><span>🥣 Sucrilhos</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Chocoboll"><input type="checkbox" class="chk-acomp" value="Chocoboll" onchange="atualizarLimites(this)"><span>🍫 Chocoboll</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Granola"><input type="checkbox" class="chk-acomp" value="Granola" onchange="atualizarLimites(this)"><span>🌾 Granola</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Granulado"><input type="checkbox" class="chk-acomp" value="Granulado" onchange="atualizarLimites(this)"><span>✨ Granulado</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Confete"><input type="checkbox" class="chk-acomp" value="Confete" onchange="atualizarLimites(this)"><span>🎉 Confete</span></label>
     </div>
   </div>
 
@@ -230,6 +249,8 @@ tailwind.config = {
     </label>
   </div>
 
+  <button type="button" class="btn-add" id="btn-add" onclick="novoCopo()" disabled>➕ Adicionar outro copo ao pedido</button>
+
   <!-- PASSO 6: ENTREGA OU RETIRADA -->
   <div class="card">
     <h2 class="titulo" style="font-size:22px;margin:0 0 14px">6. Entrega ou Retirada</h2>
@@ -237,6 +258,14 @@ tailwind.config = {
       <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Entrega" onchange="atualizarResumo()"><span>🛵 Entrega</span></label>
       <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Retirada" onchange="atualizarResumo()"><span>🏪 Retirada</span></label>
     </div>
+  </div>
+
+  <div class="card" id="bloco-endereco" style="display:none">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 12px">Endereço de Entrega</h2>
+    <input class="campo-nome" id="end-rua" placeholder="Rua / Avenida" oninput="atualizarResumo()" style="margin-bottom:10px">
+    <input class="campo-nome" id="end-num" placeholder="Número" oninput="atualizarResumo()" style="margin-bottom:10px">
+    <input class="campo-nome" id="end-bairro" placeholder="Bairro" oninput="atualizarResumo()" style="margin-bottom:10px">
+    <input class="campo-nome" id="end-comp" placeholder="Complemento / referência (opcional)" oninput="atualizarResumo()">
   </div>
 
   <!-- PASSO 7: PAGAMENTO -->
@@ -248,6 +277,25 @@ tailwind.config = {
       <label class="opcao"><input type="radio" name="pagamento" value="Cartão de Crédito" onchange="atualizarResumo()"><span>💳 Crédito</span></label>
       <label class="opcao"><input type="radio" name="pagamento" value="Cartão de Débito" onchange="atualizarResumo()"><span>🏧 Débito</span></label>
     </div>
+  </div>
+
+  <div class="card" id="bloco-troco" style="display:none">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">Troco</h2>
+    <p style="font-size:13px;margin:0 0 12px">Troco para quanto? (deixe vazio se não precisar)</p>
+    <input class="campo-nome" id="troco" inputmode="decimal" placeholder="Ex.: 50" oninput="atualizarResumo()">
+  </div>
+
+  <div class="card">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">Observações</h2>
+    <p style="font-size:13px;margin:0 0 12px">Opcional: ex.: sem granola, sem canudo...</p>
+    <textarea class="campo-nome" id="obs" rows="3" maxlength="200" placeholder="Escreva aqui" oninput="atualizarResumo()"></textarea>
+  </div>
+
+  <!-- PASSO 8: NOME -->
+  <div class="card">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">8. Seu Nome</h2>
+    <p style="font-size:13px;margin:0 0 12px">Para identificarmos o seu pedido</p>
+    <input type="text" id="nome-cliente" maxlength="40" placeholder="Digite seu nome" autocomplete="name" oninput="atualizarResumo()" class="campo-nome">
   </div>
 
   <!-- RESUMO -->
@@ -271,15 +319,44 @@ tailwind.config = {
 <script>
 // ===== ESTADO =====
 let precoBase = 0, limiteFrutas = 0, limiteAcomp = 0;
-let tamanhoEscolhido = '', formaPagamento = '', formaRecebimento = '';
+// memoria do que o cliente escolheu (na ordem), para restaurar ao trocar de tamanho
+let memFrutas = [], memAcomp = [];
+let tamanhoEscolhido = '', formaPagamento = '', formaRecebimento = '', nomeCliente = '';
 
 // ===== PAINEL DE CONTROLE =====
-function alternarPainel(){ document.getElementById('painel').classList.toggle('aberto'); }
+const PIN_PAINEL = '1524';
+function alternarPainel(){
+  const p = document.getElementById('painel');
+  if(!p.classList.contains('aberto') && sessionStorage.getItem('painel_ok') !== '1'){
+    if(prompt('Senha do painel:') !== PIN_PAINEL) return;
+    sessionStorage.setItem('painel_ok', '1');
+  }
+  p.classList.toggle('aberto');
+}
 
 function carregarDisponibilidade(){
   try { return JSON.parse(localStorage.getItem('disp_acai') || '{}'); } catch(e){ return {}; }
 }
-function salvarDisponibilidade(d){ localStorage.setItem('disp_acai', JSON.stringify(d)); }
+// Para o "esgotado" valer em todos os aparelhos: cole aqui a URL do Firebase Realtime Database
+const FIREBASE_URL = 'https://acai-da-fernanda-default-rtdb.firebaseio.com'; // ex.: 'https://meu-projeto-default-rtdb.firebaseio.com'
+let ultimoSalvar = 0;
+function salvarDisponibilidade(d){
+  localStorage.setItem('disp_acai', JSON.stringify(d));
+  if(!FIREBASE_URL) return;
+  ultimoSalvar = Date.now();
+  fetch(FIREBASE_URL + '/disp_acai.json', { method: 'PUT', body: JSON.stringify(d) })
+    .then(r => { if(!r.ok) alert('Não foi possível salvar para todos os clientes. No Firebase, confira se as regras foram publicadas (erro ' + r.status + ').'); })
+    .catch(() => alert('Sem conexão: o esgotado não foi enviado para os clientes.'));
+}
+async function sincronizarRemoto(){
+  if(!FIREBASE_URL || Date.now() - ultimoSalvar < 6000) return; // espera o envio terminar antes de reler
+  try{
+    const d = (await (await fetch(FIREBASE_URL + '/disp_acai.json')).json()) || {};
+    if(JSON.stringify(d) === localStorage.getItem('disp_acai')) return;
+    localStorage.setItem('disp_acai', JSON.stringify(d));
+    aplicarDisponibilidade(); montarBotoesControle();
+  }catch(e){}
+}
 
 function estaIndisponivel(tipo, nome){
   const d = carregarDisponibilidade();
@@ -296,6 +373,7 @@ function alternarDisponibilidade(tipo, nome){
 }
 
 function aplicarDisponibilidade(){
+  let saborRemovido = false;
   document.querySelectorAll('[data-tipo]').forEach(el => {
     const tipo = el.dataset.tipo, nome = el.dataset.nome;
     const input = el.querySelector('input');
@@ -306,16 +384,25 @@ function aplicarDisponibilidade(){
         t.className = 'tag-esgotado'; t.textContent = 'ESGOTADO';
         el.appendChild(t);
       }
-      if(input){ input.checked = false; input.disabled = true; }
+      if(input){
+        // se o cliente ja tinha escolhido, tira a escolha (visual e memoria) para nao ficar travado
+        if(input.checked && input.name === 'sabor') saborRemovido = true;
+        input.checked = false; input.disabled = true;
+        el.classList.remove('selecionado', 'bloqueado');
+        if(input.classList.contains('chk-fruta')) memFrutas = memFrutas.filter(n => n !== input.value);
+        if(input.classList.contains('chk-acomp')) memAcomp = memAcomp.filter(n => n !== input.value);
+      }
     } else {
       el.classList.remove('indisponivel');
       const t = el.querySelector('.tag-esgotado'); if(t) t.remove();
-      if(input) input.disabled = false;
+      if(input){ input.disabled = false; el.classList.remove('bloqueado'); }
     }
   });
-  atualizarResumo();
+  // recalcula os bloqueios por limite (libera as outras opcoes) e os itens ligados
+  if(typeof sincronizarLeite === 'function') sincronizarLeite();
+  if(saborRemovido) atualizarSabor();
+  atualizarLimites();
 }
-
 function montarBotoesControle(){
   const container = document.getElementById('botoes-controle');
   const grupos = [
@@ -397,12 +484,9 @@ function resetarTudoAposSabor(){
 }
 
 function limparSelecoes(){
+  memFrutas = []; memAcomp = [];
   document.querySelectorAll('.chk-fruta, .chk-acomp, .chk-cobert').forEach(cb => { if(!cb.disabled){ cb.checked = false; cb.closest('.opcao').classList.remove('selecionado'); } });
   const al = document.getElementById('adicional-leite'); al.checked = false;
-  document.querySelectorAll('input[name="pagamento"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
-  formaPagamento = '';
-  document.querySelectorAll('input[name="recebimento"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
-  formaRecebimento = '';
 }
 
 // ===== ABAS DO TAMANHO (Tradicional / Nutella) =====
@@ -441,17 +525,33 @@ function atualizarTamanho(input){
   document.getElementById('frutas').classList.remove('bloqueado');
   document.getElementById('acompanhamentos').classList.remove('bloqueado');
 
-  // limpa frutas/acomp e reseta estado disabled (mantem esgotados)
-  document.querySelectorAll('.chk-fruta, .chk-acomp').forEach(cb => {
-    cb.checked = false;
-    cb.closest('.opcao').classList.remove('selecionado');
-    if(!cb.disabled){ cb.disabled = false; cb.closest('.opcao').classList.remove('bloqueado'); }
-  });
-  atualizarResumo();
+  // restaura o que o cliente ja tinha escolhido (respeitando o limite do novo tamanho)
+  function restaurar(classe, memoria, limite){
+    const cbs = Array.from(document.querySelectorAll(classe));
+    cbs.forEach(cb => { cb.checked = false; cb.closest('.opcao').classList.remove('selecionado'); });
+    let marcados = 0;
+    memoria.forEach(nome => {
+      const cb = cbs.find(c => c.value === nome);
+      if(!cb || marcados >= limite) return;
+      if(cb.closest('.opcao').classList.contains('indisponivel')) return; // esgotado
+      cb.disabled = false; cb.closest('.opcao').classList.remove('bloqueado');
+      cb.checked = true; cb.closest('.opcao').classList.add('selecionado');
+      marcados++;
+    });
+  }
+  restaurar('.chk-fruta', memFrutas, limiteFrutas);
+  restaurar('.chk-acomp', memAcomp, limiteAcomp);
+  atualizarLimites();
 }
 
 // ===== LIMITES FRUTAS / ACOMP =====
-function atualizarLimites(){
+function atualizarLimites(el){
+  if(el){
+    const mem = el.classList.contains('chk-fruta') ? memFrutas : memAcomp;
+    const i = mem.indexOf(el.value);
+    if(el.checked && i < 0) mem.push(el.value);
+    if(!el.checked && i >= 0) mem.splice(i, 1);
+  }
   const frutasSel = document.querySelectorAll('.chk-fruta:checked').length;
   const acompSel = document.querySelectorAll('.chk-acomp:checked').length;
 
@@ -476,86 +576,98 @@ function atualizarLimites(){
 }
 
 // ===== RESUMO + BOTAO =====
+let carrinho = [];
+const esc = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const val = id => document.getElementById(id).value.trim();
+const marcados = sel => Array.from(document.querySelectorAll(sel + ':checked')).map(i => i.value);
+function copoAtual(){
+  const sabores = marcados('input[name="sabor"]');
+  if(!sabores.length || !tamanhoEscolhido) return null;
+  return { sabores, tam: tamanhoEscolhido, preco: precoBase, frutas: marcados('.chk-fruta'), acomp: marcados('.chk-acomp'), cobert: marcados('.chk-cobert'), adicional: document.getElementById('adicional-leite').checked };
+}
+const precoCopo = c => c.preco + (c.adicional ? 2 : 0);
+const reais = n => 'R$ ' + n.toFixed(2).replace('.', ',');
+function todosCopos(){ const c = copoAtual(); return c ? carrinho.concat([c]) : carrinho.slice(); }
+function linhasCopo(c, b){
+  const l = ['◆ Sabor e tamanho: ' + b(c.sabores.join(' / ') + ' ' + c.tam)];
+  l.push('◆ Frutas: ' + (c.frutas.length ? b(c.frutas.join(', ')) : 'Nenhum'));
+  l.push('◆ Acompanhamentos: ' + (c.acomp.length ? b(c.acomp.join(', ')) : 'Nenhum'));
+  l.push('◆ Coberturas: ' + (c.cobert.length ? b(c.cobert.join(', ')) : 'Nenhuma'));
+  if(c.adicional) l.push('◆ Adicional de Leite Condensado: ' + b('Sim'));
+  return l;
+}
+function novoCopo(){
+  const c = copoAtual(); if(!c) return;
+  carrinho.push(c);
+  document.querySelectorAll('input[name="sabor"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
+  atualizarSabor(); trocarAba('tradicional');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  atualizarResumo();
+}
+function removerCopo(i){ carrinho.splice(i, 1); atualizarResumo(); }
+function dadosPedido(){
+  const rec = document.querySelector('input[name="recebimento"]:checked');
+  const pag = document.querySelector('input[name="pagamento"]:checked');
+  formaRecebimento = rec ? rec.value : ''; formaPagamento = pag ? pag.value : ''; nomeCliente = val('nome-cliente');
+  const entrega = formaRecebimento === 'Entrega';
+  document.getElementById('bloco-endereco').style.display = entrega ? 'block' : 'none';
+  document.getElementById('bloco-troco').style.display = formaPagamento === 'Dinheiro' ? 'block' : 'none';
+  const end = entrega ? val('end-rua') + ', ' + val('end-num') + ' - ' + val('end-bairro') + (val('end-comp') ? ' (' + val('end-comp') + ')' : '') : '';
+  const endOk = !entrega || (val('end-rua') && val('end-num') && val('end-bairro'));
+  return { entrega, end, endOk, troco: formaPagamento === 'Dinheiro' ? val('troco') : '', obs: val('obs') };
+}
 function atualizarResumo(){
   atualizarVisualAdicional();
-  const sabores = Array.from(document.querySelectorAll('input[name="sabor"]:checked')).map(i => i.value);
-  const frutas = Array.from(document.querySelectorAll('.chk-fruta:checked')).map(i => i.value);
-  const acomp = Array.from(document.querySelectorAll('.chk-acomp:checked')).map(i => i.value);
-  const cobert = Array.from(document.querySelectorAll('.chk-cobert:checked')).map(i => i.value);
-  const adicional = document.getElementById('adicional-leite').checked;
-  const pag = document.querySelector('input[name="pagamento"]:checked');
-  formaPagamento = pag ? pag.value : '';
-  const rec = document.querySelector('input[name="recebimento"]:checked');
-  formaRecebimento = rec ? rec.value : '';
-
-  let total = precoBase + (adicional ? 2 : 0);
-  const resumo = document.getElementById('resumo');
-  const btn = document.getElementById('btn-enviar');
-
-  if(sabores.length === 0 || !tamanhoEscolhido){
-    resumo.innerHTML = '<p style="color:#FACC15;font-style:italic">Escolha o sabor e o tamanho para começar...</p>';
-    document.getElementById('total').textContent = 'R$ 0,00';
+  const d = dadosPedido(), copos = todosCopos();
+  const resumo = document.getElementById('resumo'), btn = document.getElementById('btn-enviar');
+  const total = copos.reduce((t, c) => t + precoCopo(c), 0);
+  document.getElementById('total').textContent = reais(total);
+  document.getElementById('total-barra').textContent = reais(total);
+  document.getElementById('btn-add').disabled = !copoAtual();
+  if(!copos.length){
+    resumo.innerHTML = '<p style="font-style:italic">Escolha o sabor e o tamanho para começar...</p>';
     btn.disabled = true; btn.className = 'btn-enviar travado';
     btn.innerHTML = '<i class="fa fa-whatsapp"></i> Monte seu pedido primeiro';
     return;
   }
-
-  const f = frutas.length ? '<strong>' + frutas.join(', ') + '</strong>' : 'Nenhum';
-  const a = acomp.length ? '<strong>' + acomp.join(', ') + '</strong>' : 'Nenhum';
-  const c = cobert.length ? '<strong>' + cobert.join(', ') + '</strong>' : 'Nenhuma';
-  const ad = adicional ? '<strong>Sim</strong>' : 'Não';
-  const p = formaPagamento ? '<strong>' + formaPagamento + '</strong>' : 'Ainda não escolhida';
-  const r = formaRecebimento ? '<strong>' + formaRecebimento + '</strong>' : 'Ainda não escolhido';
-
-  resumo.innerHTML =
-    '<p>◆ Sabor e tamanho: <strong>' + sabores.join(' / ') + ' — ' + tamanhoEscolhido + '</strong></p>' +
-    '<p>◆ Frutas: ' + f + '</p>' +
-    '<p>◆ Acompanhamentos: ' + a + '</p>' +
-    '<p>◆ Coberturas: ' + c + '</p>' +
-    '<p>◆ Adicional de Leite Condensado: ' + ad + '</p>' +
-    '<p style="margin-top:8px">◆ Recebimento: ' + r + '</p>' +
-    '<p>◆ Forma de Pagamento: ' + p + '</p>';
-
-  document.getElementById('total').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
-
-  if(formaPagamento && formaRecebimento){
-    btn.disabled = false; btn.className = 'btn-enviar liberado';
-    btn.innerHTML = '<i class="fa fa-whatsapp"></i> Enviar Pedido no WhatsApp';
-  } else {
-    btn.disabled = true; btn.className = 'btn-enviar travado';
-    btn.innerHTML = '<i class="fa fa-whatsapp"></i> ' + (!formaRecebimento ? 'Escolha entrega ou retirada' : 'Escolha a forma de pagamento');
-  }
+  const B = t => '<strong>' + esc(t) + '</strong>';
+  let h = '';
+  copos.forEach((c, i) => {
+    const doCarrinho = i < carrinho.length;
+    h += '<div class="copo-box">' + (doCarrinho ? '<button class="rm" onclick="removerCopo(' + i + ')">✕</button>' : '') +
+      (copos.length > 1 ? '<p><strong>Copo ' + (i + 1) + '</strong> — ' + reais(precoCopo(c)) + '</p>' : '') +
+      linhasCopo(c, B).map(x => '<p>' + x + '</p>').join('') + '</div>';
+  });
+  h += '<p>◆ Recebimento: ' + (formaRecebimento ? B(formaRecebimento) : 'Ainda não escolhido') + '</p>';
+  if(d.entrega) h += '<p>◆ Endereço: ' + (d.endOk ? B(d.end) : 'Preencha o endereço') + '</p>';
+  h += '<p>◆ Forma de Pagamento: ' + (formaPagamento ? B(formaPagamento) : 'Ainda não escolhida') + '</p>';
+  if(d.troco) h += '<p>◆ Troco para: ' + B('R$ ' + d.troco) + '</p>';
+  if(d.obs) h += '<p>◆ Observações: ' + B(d.obs) + '</p>';
+  h += '<p>◆ Nome: ' + (nomeCliente ? B(nomeCliente) : 'Ainda não informado') + '</p>';
+  resumo.innerHTML = h;
+  const falta = !formaRecebimento ? 'Escolha entrega ou retirada' : !d.endOk ? 'Preencha o endereço' : !formaPagamento ? 'Escolha a forma de pagamento' : !nomeCliente ? 'Digite seu nome' : '';
+  btn.disabled = !!falta; btn.className = 'btn-enviar ' + (falta ? 'travado' : 'liberado');
+  btn.innerHTML = '<i class="fa fa-whatsapp"></i> ' + (falta || 'Enviar Pedido no WhatsApp');
 }
 
 // ===== WHATSAPP =====
 function enviarWhatsApp(){
-  const sabores = Array.from(document.querySelectorAll('input[name="sabor"]:checked')).map(i => i.value);
-  const frutas = Array.from(document.querySelectorAll('.chk-fruta:checked')).map(i => i.value);
-  const acomp = Array.from(document.querySelectorAll('.chk-acomp:checked')).map(i => i.value);
-  const cobert = Array.from(document.querySelectorAll('.chk-cobert:checked')).map(i => i.value);
-  const adicional = document.getElementById('adicional-leite').checked;
-  const total = precoBase + (adicional ? 2 : 0);
-
-  // *texto* = negrito no WhatsApp. Tudo que o cliente escolheu vai em negrito.
-  const neg = (lista, vazio) => lista.length ? '*' + lista.join(', ') + '*' : vazio;
-
-  const linhas = [
-    '◆ SEU PEDIDO',
-    '◆ Sabor e tamanho: *' + sabores.join(' / ') + ' ' + tamanhoEscolhido + '*',
-    '◆ Frutas: ' + neg(frutas, 'Nenhum'),
-    '◆ Acompanhamentos: ' + neg(acomp, 'Nenhum'),
-    '◆ Coberturas: ' + neg(cobert, 'Nenhuma'),
-    '◆ Adicional de Leite Condensado: ' + (adicional ? '*Sim*' : 'Não'),
-    '◆ Recebimento: *' + formaRecebimento + '*',
-    '◆ Forma de Pagamento: *' + formaPagamento + '*',
-    '◆ Total: *R$ ' + total.toFixed(2).replace('.', ',') + '*',
-    'Olá! Gostaria de confirmar meu pedido! ◆'
-  ];
-  // linha em branco entre cada frase
-  const msg = linhas.join('\n\n');
-
-  const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(msg);
-  window.open(url, '_blank');
+  atualizarResumo();
+  if(document.getElementById('btn-enviar').disabled) return;
+  const d = dadosPedido(), copos = todosCopos(), B = t => '*' + t + '*';
+  const total = copos.reduce((t, c) => t + precoCopo(c), 0);
+  const L = ['◆ PEDIDO DE ' + B(nomeCliente)];
+  copos.forEach((c, i) => {
+    if(copos.length > 1) L.push('◆ ' + B('COPO ' + (i + 1)));
+    L.push(...linhasCopo(c, B));
+  });
+  L.push('◆ Recebimento: ' + B(formaRecebimento));
+  if(d.entrega) L.push('◆ Endereço: ' + B(d.end));
+  L.push('◆ Forma de Pagamento: ' + B(formaPagamento));
+  if(d.troco) L.push('◆ Troco para: ' + B('R$ ' + d.troco));
+  if(d.obs) L.push('◆ Observações: ' + B(d.obs));
+  L.push('◆ Total: ' + B(reais(total)), 'Olá! Gostaria de confirmar meu pedido! ◆');
+  window.open('https://wa.me/5511979908372?text=' + encodeURIComponent(L.join('\n\n')), '_blank');
 }
 
 // ===== FECHA PAINEL AO CLICAR FORA =====
@@ -572,6 +684,9 @@ document.addEventListener('click', function(e){
 // ===== INICIALIZA =====
 aplicarDisponibilidade();
 montarBotoesControle();
+sincronizarRemoto(); setInterval(sincronizarRemoto, 5000);
+// outras abas do mesmo navegador atualizam na hora
+window.addEventListener('storage', e => { if(e.key === 'disp_acai'){ aplicarDisponibilidade(); montarBotoesControle(); } });
 </script>
 </body>
 </html>
