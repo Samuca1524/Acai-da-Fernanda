@@ -327,10 +327,8 @@ let tamanhoEscolhido = '', formaPagamento = '', formaRecebimento = '', nomeClien
 const PIN_PAINEL = '1524';
 function alternarPainel(){
   const p = document.getElementById('painel');
-  if(!p.classList.contains('aberto') && sessionStorage.getItem('painel_ok') !== '1'){
-    if(prompt('Senha do painel:') !== PIN_PAINEL) return;
-    sessionStorage.setItem('painel_ok', '1');
-  }
+  // pede a senha TODA vez que for abrir (fechar não pede)
+  if(!p.classList.contains('aberto') && prompt('Senha do painel:') !== PIN_PAINEL) return;
   p.classList.toggle('aberto');
 }
 
