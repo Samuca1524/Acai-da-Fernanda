@@ -52,8 +52,9 @@ tailwind.config = {
   .tag-esgotado { position: absolute; top: 4px; right: 6px; font-size: 9px; background: #EF4444; color: #fff; padding: 2px 5px; border-radius: 4px; font-weight: 700; }
   .titulo { font-family: 'Fredoka One', sans-serif; color: #FACC15; }
   .preco { color: #FACC15; font-weight: 700; }
-  .engrenagem { position: fixed; top: 14px; left: 14px; z-index: 100; width: 42px; height: 42px; border-radius: 50%; background: rgba(90,24,154,.9); border: 1px solid #7B2CBF; color: #FACC15; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .25s; }
-  .engrenagem:hover { transform: rotate(60deg); background: #7B2CBF; }
+  .engrenagem { position: fixed; top: 4px; left: 4px; z-index: 100; width: 30px; height: 30px; border-radius: 50%; background: transparent; border: none; color: #FACC15; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: .05; transition: opacity .3s; }
+  .engrenagem svg { width: 16px; height: 16px; }
+  .engrenagem:hover { opacity: .7; }
   .painel { position: fixed; top: 64px; left: 14px; right: 14px; max-width: 480px; z-index: 99; background: #2D0C5E; border: 2px solid #7B2CBF; border-radius: 16px; padding: 16px; max-height: 82vh; overflow-y: auto; opacity: 0; pointer-events: none; transform: translateY(-8px); transition: all .3s; }
   .painel.aberto { opacity: 1; pointer-events: auto; transform: translateY(0); }
   .btn-ctrl { padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #fff; border: none; cursor: pointer; margin: 3px; }
