@@ -322,6 +322,7 @@ tailwind.config = {
   <p style="text-align:center;color:#FACC15;font-size:13px;margin-top:16px">(11) 97990-8372 • @acai_dafernanda • Entrega em domicílio</p>
 </main>
 
+<div id="barra-total"><span>Total: <span id="total-barra" class="preco">R$ 0,00</span></span><button type="button" onclick="document.getElementById('resumo').scrollIntoView({behavior:'smooth',block:'center'})">Ver pedido ↓</button></div>
 <script>
 // ===== ESTADO =====
 let precoBase = 0, limiteFrutas = 0, limiteAcomp = 0;
@@ -692,6 +693,5 @@ sincronizarRemoto(); setInterval(sincronizarRemoto, 5000);
 // outras abas do mesmo navegador atualizam na hora
 window.addEventListener('storage', e => { if(e.key === 'disp_acai'){ aplicarDisponibilidade(); montarBotoesControle(); } });
 </script>
-<div id="barra-total"><span>Total: <span id="total-barra" class="preco">R$ 0,00</span></span><button type="button" onclick="document.getElementById('resumo').scrollIntoView({behavior:'smooth',block:'center'})">Ver pedido ↓</button></div>
 </body>
 </html>
