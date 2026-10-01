@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Açaí da Fernanda | Monte seu Pedido</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        roxoFundo: '#1F0A47',
+        roxoEscuro: '#2D0C5E',
+        roxoCard: '#3B0E7A',
+        roxoMedio: '#5A189A',
+        roxoClaro: '#7B2CBF',
+        roxoMuitoClaro: '#FACC15',
+        textoClaro: '#FDE047',
+        verdeOk: '#22C55E',
+        vermelhoErro: '#EF4444',
+        verdeWhats: '#25D366'
+      },
+      fontFamily: {
+        titulo: ['Fredoka One', 'sans-serif'],
+        corpo: ['Roboto', 'sans-serif']
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; }
+  body { background-color: #FACC15; color: #FDE047; font-family: 'Roboto', sans-serif; margin: 0; }
+  .card { background-color: #3B0E7A; border: 2px solid #5A189A; border-radius: 16px; padding: 24px; margin-bottom: 24px; transition: all .3s; }
+  .card:hover { border-color: #7B2CBF; }
+  .opcao { background-color: #4A1599; border: 2px solid #5A189A; border-radius: 12px; padding: 12px; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 8px; user-select: none; }
+  .opcao:hover { border-color: #7B2CBF; background-color: #5A189A; }
+  .opcao.selecionado { border: 3px solid #FACC15; background-color: rgba(250,204,21,0.25); box-shadow: 0 0 14px rgba(250,204,21,0.6); transform: scale(1.02); }
+  .abas-tamanho { display: flex; gap: 8px; margin-bottom: 12px; }
+  .aba { flex: 1; padding: 10px 12px; border-radius: 999px; border: 2px solid #5A189A; background: #4A1599; color: #FACC15; font-weight: 700; font-size: 15px; cursor: pointer; transition: all .2s; }
+  .aba:hover { border-color: #FACC15; }
+  .aba.ativa { background: #FACC15; color: #2D0C5E; border-color: #FACC15; }
+  .grade-tam { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+  .opcao.adicional { border: 2px dashed #7B2CBF; background-color: #4A1599; opacity: .85; }
+  .opcao.adicional .check-ad { width: 26px; height: 26px; color: transparent; text-align: center; flex-shrink: 0; transition: all .2s; }
+  .opcao.adicional.selecionado { border: 3px solid #22C55E; background-color: rgba(34,197,94,.22); box-shadow: 0 0 14px rgba(34,197,94,.55); opacity: 1; transform: none; }
+  .opcao.adicional.selecionado .check-ad { color: #22C55E; }
+  .opcao.indisponivel { opacity: .35; pointer-events: none; position: relative; }
+  .tag-esgotado { position: absolute; top: 4px; right: 6px; font-size: 9px; background: #EF4444; color: #fff; padding: 2px 5px; border-radius: 4px; font-weight: 700; }
+  .titulo { font-family: 'Fredoka One', sans-serif; color: #FACC15; }
+  .preco { color: #FACC15; font-weight: 700; }
+  .engrenagem { position: fixed; top: 14px; left: 14px; z-index: 100; width: 42px; height: 42px; border-radius: 50%; background: rgba(90,24,154,.9); border: 1px solid #7B2CBF; color: #FACC15; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .25s; }
+  .engrenagem:hover { transform: rotate(60deg); background: #7B2CBF; }
+  .painel { position: fixed; top: 64px; left: 14px; right: 14px; max-width: 480px; z-index: 99; background: #2D0C5E; border: 2px solid #7B2CBF; border-radius: 16px; padding: 16px; max-height: 82vh; overflow-y: auto; opacity: 0; pointer-events: none; transform: translateY(-8px); transition: all .3s; }
+  .painel.aberto { opacity: 1; pointer-events: auto; transform: translateY(0); }
+  .btn-ctrl { padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; color: #fff; border: none; cursor: pointer; margin: 3px; }
+  .btn-ctrl.ok { background: #22C55E; }
+  .btn-ctrl.off { background: #EF4444; }
+  .bloqueado { opacity: .45; pointer-events: none; }
+  input[type=checkbox], input[type=radio] { display: none; }
+  .btn-enviar { width: 100%; padding: 18px; border-radius: 999px; font-size: 20px; font-weight: 700; border: none; cursor: pointer; transition: all .2s; }
+  .btn-enviar.liberado { background: #25D366; color: #fff; }
+  .btn-enviar.liberado:hover { background: #1DA851; transform: translateY(-2px); }
+  .btn-enviar.travado { background: #6B7280; color: #D1D5DB; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<!-- ENGRENAGEM / PAINEL DE CONTROLE -->
+<div class="engrenagem" onclick="alternarPainel()"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></div>
+<div class="painel" id="painel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <h3 class="titulo" style="font-size:20px;margin:0">Painel de Controle</h3>
+    <span onclick="alternarPainel()" style="cursor:pointer;font-size:22px;color:#FACC15">&times;</span>
+  </div>
+  <p style="font-size:12px;color:#FACC15;margin:0 0 10px">Clique para marcar como esgotado. Fica salvo automaticamente.</p>
+  <div id="botoes-controle"></div>
+</div>
+
+<!-- CABECALHO -->
+<header style="background:#2D0C5E;padding:20px;text-align:center;border-bottom:2px solid #5A189A">
+  <h1 class="titulo" style="font-size:clamp(28px,6vw,44px);margin:0;color:#FACC15">Açaí da Fernanda</h1>
+  <p style="color:#FACC15;margin:6px 0 0">Açaí • Cupuaçu • Mangaba — Entrega em domicílio</p>
+</header>
+
+<main style="max-width:760px;margin:0 auto;padding:20px">
+
+  <!-- PASSO 1: SABORES (multipla escolha) -->
+  <div class="card">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">1. Escolha o Sabor (pode escolher mais de um)</h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="lista-sabores">
+      <label class="opcao" style="flex-direction:column;text-align:center" data-tipo="sabor" data-nome="Açaí">
+        <input type="checkbox" name="sabor" value="Açaí" onchange="atualizarSabor()">
+        <span style="font-size:32px">🫐</span><span style="font-weight:700">Açaí</span>
+      </label>
+      <label class="opcao" style="flex-direction:column;text-align:center" data-tipo="sabor" data-nome="Cupuaçu">
+        <input type="checkbox" name="sabor" value="Cupuaçu" onchange="atualizarSabor()">
+        <span style="font-size:32px">🍦</span><span style="font-weight:700">Cupuaçu</span>
+      </label>
+      <label class="opcao" style="flex-direction:column;text-align:center" data-tipo="sabor" data-nome="Mangaba">
+        <input type="checkbox" name="sabor" value="Mangaba" onchange="atualizarSabor()">
+        <span style="font-size:32px">🥭</span><span style="font-weight:700">Mangaba</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- PASSO 2: TAMANHO -->
+  <div class="card">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">2. Escolha o Tamanho</h2>
+    <p id="aviso-tamanho" style="font-size:13px;color:#FACC15;margin:0 0 12px">Escolha o sabor primeiro</p>
+    <div class="abas-tamanho">
+      <button type="button" class="aba ativa" id="aba-tradicional" onclick="trocarAba('tradicional')">Tradicional</button>
+      <button type="button" class="aba" id="aba-nutella" onclick="trocarAba('nutella')">🍫 Com Nutella</button>
+    </div>
+    <div id="tamanhos" class="bloqueado">
+      <div id="grade-tradicional" class="grade-tam">
+      <label class="opcao" style="flex-direction:column;text-align:center" data-preco="10" data-frutas="1" data-acomp="2">
+        <input type="radio" name="tamanho" value="200ml" onchange="atualizarTamanho(this)">
+        <span style="font-weight:700;font-size:18px">200ml</span>
+        <span style="font-size:12px">1 fruta • 2 acomp.</span>
+        <span class="preco">R$ 10,00</span>
+      </label>
+      <label class="opcao" style="flex-direction:column;text-align:center" data-preco="15" data-frutas="2" data-acomp="3">
+        <input type="radio" name="tamanho" value="300ml" onchange="atualizarTamanho(this)">
+        <span style="font-weight:700;font-size:18px">300ml</span>
+        <span style="font-size:12px">2 frutas • 3 acomp.</span>
+        <span class="preco">R$ 15,00</span>
+      </label>
+      <label class="opcao" style="flex-direction:column;text-align:center" data-preco="20" data-frutas="2" data-acomp="3">
+        <input type="radio" name="tamanho" value="500ml" onchange="atualizarTamanho(this)">
+        <span style="font-weight:700;font-size:18px">500ml</span>
+        <span style="font-size:12px">2 frutas • 3 acomp.</span>
+        <span class="preco">R$ 20,00</span>
+      </label>
+      <label class="opcao" style="flex-direction:column;text-align:center" data-preco="25" data-frutas="3" data-acomp="3">
+        <input type="radio" name="tamanho" value="700ml" onchange="atualizarTamanho(this)">
+        <span style="font-weight:700;font-size:18px">700ml</span>
+        <span style="font-size:12px">3 frutas • 3 acomp.</span>
+        <span class="preco">R$ 25,00</span>
+      </label>
+      <label class="opcao" style="flex-direction:column;text-align:center;grid-column:span 2" data-preco="40" data-frutas="4" data-acomp="4">
+        <input type="radio" name="tamanho" value="1 Litro" onchange="atualizarTamanho(this)">
+        <span style="font-weight:700;font-size:18px">1 Litro</span>
+        <span style="font-size:12px">4 frutas • 4 acompanhamentos</span>
+        <span class="preco">R$ 40,00</span>
+      </label>
+    </div>
+      <div id="grade-nutella" class="grade-tam" style="display:none">
+      <label class="opcao" style="flex-direction:column;text-align:center" data-preco="15" data-frutas="1" data-acomp="2">
+        <input type="radio" name="tamanho" value="200ml com Nutella" onchange="atualizarTamanho(this)">
+        <span style="font-weight:700;font-size:18px">200ml</span>
+        <span style="font-size:12px">1 fruta • 2 acomp.</span>
+        <span class="preco">R$ 15,00</span>
+      </label>
+      <label class="opcao" style="flex-direction:column;text-align:center" data-preco="22" data-frutas="2" data-acomp="3">
+        <input type="radio" name="tamanho" value="300ml com Nutella" onchange="atualizarTamanho(this)">
+        <span style="font-weight:700;font-size:18px">300ml</span>
+        <span style="font-size:12px">2 frutas • 3 acomp.</span>
+        <span class="preco">R$ 22,00</span>
+      </label>
+      <label class="opcao" style="flex-direction:column;text-align:center" data-preco="28" data-frutas="2" data-acomp="3">
+        <input type="radio" name="tamanho" value="500ml com Nutella" onchange="atualizarTamanho(this)">
+        <span style="font-weight:700;font-size:18px">500ml</span>
+        <span style="font-size:12px">2 frutas • 3 acomp.</span>
+        <span class="preco">R$ 28,00</span>
+      </label>
+      <label class="opcao" style="flex-direction:column;text-align:center" data-preco="35" data-frutas="3" data-acomp="3">
+        <input type="radio" name="tamanho" value="700ml com Nutella" onchange="atualizarTamanho(this)">
+        <span style="font-weight:700;font-size:18px">700ml</span>
+        <span style="font-size:12px">3 frutas • 3 acomp.</span>
+        <span class="preco">R$ 35,00</span>
+      </label>
+      <label class="opcao" style="flex-direction:column;text-align:center;grid-column:span 2" data-preco="50" data-frutas="4" data-acomp="4">
+        <input type="radio" name="tamanho" value="1 Litro com Nutella" onchange="atualizarTamanho(this)">
+        <span style="font-weight:700;font-size:18px">1 Litro</span>
+        <span style="font-size:12px">4 frutas • 4 acompanhamentos</span>
+        <span class="preco">R$ 50,00</span>
+      </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASSO 3: FRUTAS -->
+  <div class="card">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">3. Escolha as Frutas</h2>
+    <p id="aviso-frutas" style="font-size:13px;color:#FACC15;margin:0 0 12px">Escolha o tamanho primeiro</p>
+    <div id="frutas" class="bloqueado" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+      <label class="opcao" data-tipo="fruta" data-nome="Banana"><input type="checkbox" class="chk-fruta" value="Banana" onchange="atualizarLimites()"><span>🍌 Banana</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Uva Verde"><input type="checkbox" class="chk-fruta" value="Uva Verde" onchange="atualizarLimites()"><span>🍇 Uva Verde</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Morango"><input type="checkbox" class="chk-fruta" value="Morango" onchange="atualizarLimites()"><span>🍓 Morango</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Manga"><input type="checkbox" class="chk-fruta" value="Manga" onchange="atualizarLimites()"><span>🥭 Manga</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Abacaxi"><input type="checkbox" class="chk-fruta" value="Abacaxi" onchange="atualizarLimites()"><span>🍍 Abacaxi</span></label>
+    </div>
+  </div>
+
+  <!-- PASSO 4: ACOMPANHAMENTOS -->
+  <div class="card">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">4. Escolha os Acompanhamentos</h2>
+    <p id="aviso-acomp" style="font-size:13px;color:#FACC15;margin:0 0 12px">Escolha o tamanho primeiro</p>
+    <div id="acompanhamentos" class="bloqueado" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+      <label class="opcao" data-tipo="acomp" data-nome="Leite em Pó"><input type="checkbox" class="chk-acomp" value="Leite em Pó" onchange="atualizarLimites()"><span>🥛 Leite em Pó</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Paçoca"><input type="checkbox" class="chk-acomp" value="Paçoca" onchange="atualizarLimites()"><span>🥜 Paçoca</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Amendoim"><input type="checkbox" class="chk-acomp" value="Amendoim" onchange="atualizarLimites()"><span>🥜 Amendoim</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Ovomaltine"><input type="checkbox" class="chk-acomp" value="Ovomaltine" onchange="atualizarLimites()"><span>🍫 Ovomaltine</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Sucrilhos"><input type="checkbox" class="chk-acomp" value="Sucrilhos" onchange="atualizarLimites()"><span>🥣 Sucrilhos</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Chocoboll"><input type="checkbox" class="chk-acomp" value="Chocoboll" onchange="atualizarLimites()"><span>🍫 Chocoboll</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Granola"><input type="checkbox" class="chk-acomp" value="Granola" onchange="atualizarLimites()"><span>🌾 Granola</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Granulado"><input type="checkbox" class="chk-acomp" value="Granulado" onchange="atualizarLimites()"><span>✨ Granulado</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Confete"><input type="checkbox" class="chk-acomp" value="Confete" onchange="atualizarLimites()"><span>🎉 Confete</span></label>
+    </div>
+  </div>
+
+  <!-- PASSO 5: COBERTURAS + ADICIONAL -->
+  <div class="card">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">5. Coberturas e Extras</h2>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px">
+      <label class="opcao" data-tipo="cobert" data-nome="Cobertura de Chocolate"><input type="checkbox" class="chk-cobert" value="Cobertura de Chocolate" onchange="atualizarResumo()"><span>🍫 Chocolate</span></label>
+      <label class="opcao" data-tipo="cobert" data-nome="Cobertura de Morango"><input type="checkbox" class="chk-cobert" value="Cobertura de Morango" onchange="atualizarResumo()"><span>🍓 Morango</span></label>
+      <label class="opcao" data-tipo="cobert" data-nome="Cobertura de Leite Condensado" style="grid-column:span 2"><input type="checkbox" class="chk-cobert" id="cobert-leite" value="Cobertura de Leite Condensado" onchange="sincronizarLeite()"><span>🥛 Leite Condensado</span></label>
+    </div>
+    <label class="opcao adicional" id="box-adicional">
+      <input type="checkbox" id="adicional-leite" onchange="sincronizarLeite()">
+      <svg class="check-ad" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12.5 10 18.5 20 6"/></svg>
+      <span>🍯 Adicional de Leite Condensado</span>
+      <span class="preco" style="margin-left:auto">+ R$ 2,00</span>
+    </label>
+  </div>
+
+  <!-- PASSO 6: ENTREGA OU RETIRADA -->
+  <div class="card">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">6. Entrega ou Retirada</h2>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+      <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Entrega" onchange="atualizarResumo()"><span>🛵 Entrega</span></label>
+      <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Retirada" onchange="atualizarResumo()"><span>🏪 Retirada</span></label>
+    </div>
+  </div>
+
+  <!-- PASSO 7: PAGAMENTO -->
+  <div class="card">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">7. Forma de Pagamento</h2>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+      <label class="opcao"><input type="radio" name="pagamento" value="Dinheiro" onchange="atualizarResumo()"><span>💵 Dinheiro</span></label>
+      <label class="opcao"><input type="radio" name="pagamento" value="Pix" onchange="atualizarResumo()"><span>📱 Pix</span></label>
+      <label class="opcao"><input type="radio" name="pagamento" value="Cartão de Crédito" onchange="atualizarResumo()"><span>💳 Crédito</span></label>
+      <label class="opcao"><input type="radio" name="pagamento" value="Cartão de Débito" onchange="atualizarResumo()"><span>🏧 Débito</span></label>
+    </div>
+  </div>
+
+  <!-- RESUMO -->
+  <div class="card" style="background:#2D0C5E;border-color:#7B2CBF">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">SEU PEDIDO</h2>
+    <div id="resumo" style="line-height:1.9;min-height:120px">
+      <p style="color:#FACC15;font-style:italic">Escolha o sabor e o tamanho para começar...</p>
+    </div>
+    <div style="border-top:1px solid #5A189A;margin-top:14px;padding-top:14px">
+      <p style="font-size:22px;font-weight:700;margin:0">Total: <span id="total" class="preco" style="font-size:26px">R$ 0,00</span></p>
+    </div>
+  </div>
+
+  <button id="btn-enviar" class="btn-enviar travado" onclick="enviarWhatsApp()" disabled>
+    <i class="fa fa-whatsapp"></i> Monte seu pedido primeiro
+  </button>
+
+  <p style="text-align:center;color:#FACC15;font-size:13px;margin-top:16px">(11) 97990-8372 • @acai_dafernanda • Entrega em domicílio</p>
+</main>
+
+<script>
+// ===== ESTADO =====
+let precoBase = 0, limiteFrutas = 0, limiteAcomp = 0;
+let tamanhoEscolhido = '', formaPagamento = '', formaRecebimento = '';
+
+// ===== PAINEL DE CONTROLE =====
+function alternarPainel(){ document.getElementById('painel').classList.toggle('aberto'); }
+
+function carregarDisponibilidade(){
+  try { return JSON.parse(localStorage.getItem('disp_acai') || '{}'); } catch(e){ return {}; }
+}
+function salvarDisponibilidade(d){ localStorage.setItem('disp_acai', JSON.stringify(d)); }
+
+function estaIndisponivel(tipo, nome){
+  const d = carregarDisponibilidade();
+  return d[tipo] && d[tipo][nome] === false;
+}
+
+function alternarDisponibilidade(tipo, nome){
+  const d = carregarDisponibilidade();
+  if(!d[tipo]) d[tipo] = {};
+  d[tipo][nome] = !(d[tipo][nome] !== false);
+  salvarDisponibilidade(d);
+  aplicarDisponibilidade();
+  montarBotoesControle();
+}
+
+function aplicarDisponibilidade(){
+  document.querySelectorAll('[data-tipo]').forEach(el => {
+    const tipo = el.dataset.tipo, nome = el.dataset.nome;
+    const input = el.querySelector('input');
+    if(estaIndisponivel(tipo, nome)){
+      el.classList.add('indisponivel');
+      if(!el.querySelector('.tag-esgotado')){
+        const t = document.createElement('span');
+        t.className = 'tag-esgotado'; t.textContent = 'ESGOTADO';
+        el.appendChild(t);
+      }
+      if(input){ input.checked = false; input.disabled = true; }
+    } else {
+      el.classList.remove('indisponivel');
+      const t = el.querySelector('.tag-esgotado'); if(t) t.remove();
+      if(input) input.disabled = false;
+    }
+  });
+  atualizarResumo();
+}
+
+function montarBotoesControle(){
+  const container = document.getElementById('botoes-controle');
+  const grupos = [
+    {titulo:'Sabores', itens:[['sabor','Açaí'],['sabor','Cupuaçu'],['sabor','Mangaba']]},
+    {titulo:'Frutas', itens:[['fruta','Banana'],['fruta','Uva Verde'],['fruta','Morango'],['fruta','Manga'],['fruta','Abacaxi']]},
+    {titulo:'Acompanhamentos', itens:[['acomp','Leite em Pó'],['acomp','Paçoca'],['acomp','Amendoim'],['acomp','Ovomaltine'],['acomp','Sucrilhos'],['acomp','Chocoboll'],['acomp','Granola'],['acomp','Granulado'],['acomp','Confete']]},
+    {titulo:'Coberturas', itens:[['cobert','Cobertura de Chocolate'],['cobert','Cobertura de Morango'],['cobert','Cobertura de Leite Condensado']]}
+  ];
+  let html = '';
+  grupos.forEach(g => {
+    html += `<p style="font-weight:700;color:#FACC15;margin:10px 0 4px;font-size:13px">${g.titulo}</p><div style="display:flex;flex-wrap:wrap">`;
+    g.itens.forEach(([tipo,nome]) => {
+      const off = estaIndisponivel(tipo, nome);
+      html += `<button class="btn-ctrl ${off?'off':'ok'}" onclick="alternarDisponibilidade('${tipo}','${nome}')">${off?'🚫':'✅'} ${nome.replace('Cobertura de ','')}</button>`;
+    });
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function atualizarVisualAdicional(){
+  const ad = document.getElementById('adicional-leite');
+  document.getElementById('box-adicional').classList.toggle('selecionado', ad.checked);
+}
+// ===== SINCRONIA LEITE CONDENSADO =====
+let sincronizando = false;
+function sincronizarLeite(){
+  if(sincronizando) return;
+  sincronizando = true;
+  const adicional = document.getElementById('adicional-leite');
+  const cobert = document.getElementById('cobert-leite');
+  // Se marcou o adicional -> marca a cobertura
+  if(adicional.checked && !cobert.checked) cobert.checked = true;
+  // Se desmarcou a cobertura -> desmarca o adicional
+  if(!cobert.checked && adicional.checked) adicional.checked = false;
+  // Marca visual da cobertura
+  cobert.closest('.opcao').classList.toggle('selecionado', cobert.checked);
+  sincronizando = false;
+  atualizarVisualAdicional();
+  atualizarResumo();
+}
+
+// ===== MARCAR SELECIONADOS (visual) =====
+document.addEventListener('change', function(e){
+  if(e.target.matches('input[type=checkbox], input[type=radio]')){
+    const label = e.target.closest('.opcao');
+    if(!label) return;
+    if(e.target.type === 'radio' && e.target.name){
+      document.querySelectorAll(`input[name="${e.target.name}"]`).forEach(i => i.closest('.opcao').classList.remove('selecionado'));
+    }
+    label.classList.toggle('selecionado', e.target.checked);
+  }
+});
+
+// ===== PASSO 1: SABOR =====
+function atualizarSabor(){
+  const sabores = Array.from(document.querySelectorAll('input[name="sabor"]:checked')).map(i => i.value);
+  const tamanhos = document.getElementById('tamanhos');
+  const aviso = document.getElementById('aviso-tamanho');
+  if(sabores.length > 0){
+    aviso.textContent = 'Escolha o tamanho (' + sabores.join(' + ') + ')';
+    tamanhos.classList.remove('bloqueado');
+  } else {
+    aviso.textContent = 'Escolha o sabor primeiro';
+    tamanhos.classList.add('bloqueado');
+    resetarTudoAposSabor();
+  }
+  atualizarResumo();
+}
+
+function resetarTudoAposSabor(){
+  document.querySelectorAll('input[name="tamanho"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
+  tamanhoEscolhido = ''; precoBase = 0; limiteFrutas = 0; limiteAcomp = 0;
+  document.getElementById('frutas').classList.add('bloqueado');
+  document.getElementById('acompanhamentos').classList.add('bloqueado');
+  document.getElementById('aviso-frutas').textContent = 'Escolha o tamanho primeiro';
+  document.getElementById('aviso-acomp').textContent = 'Escolha o tamanho primeiro';
+  limparSelecoes();
+}
+
+function limparSelecoes(){
+  document.querySelectorAll('.chk-fruta, .chk-acomp, .chk-cobert').forEach(cb => { if(!cb.disabled){ cb.checked = false; cb.closest('.opcao').classList.remove('selecionado'); } });
+  const al = document.getElementById('adicional-leite'); al.checked = false;
+  document.querySelectorAll('input[name="pagamento"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
+  formaPagamento = '';
+  document.querySelectorAll('input[name="recebimento"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
+  formaRecebimento = '';
+}
+
+// ===== ABAS DO TAMANHO (Tradicional / Nutella) =====
+function trocarAba(tipo){
+  document.getElementById('aba-tradicional').classList.toggle('ativa', tipo === 'tradicional');
+  document.getElementById('aba-nutella').classList.toggle('ativa', tipo === 'nutella');
+  const gTrad = document.getElementById('grade-tradicional');
+  const gNut = document.getElementById('grade-nutella');
+  const radiosAntigos = Array.from((tipo === 'nutella' ? gTrad : gNut).querySelectorAll('input[name="tamanho"]'));
+  const idx = radiosAntigos.findIndex(r => r.checked);
+  gTrad.style.display = tipo === 'tradicional' ? 'grid' : 'none';
+  gNut.style.display = tipo === 'nutella' ? 'grid' : 'none';
+  // mantem o mesmo tamanho na nova aba (frutas/acomp sao iguais), so muda o preco
+  if(idx >= 0){
+    radiosAntigos[idx].checked = false;
+    radiosAntigos[idx].closest('.opcao').classList.remove('selecionado');
+    const novo = (tipo === 'nutella' ? gNut : gTrad).querySelectorAll('input[name="tamanho"]')[idx];
+    novo.checked = true;
+    novo.closest('.opcao').classList.add('selecionado');
+    precoBase = parseFloat(novo.closest('.opcao').dataset.preco);
+    tamanhoEscolhido = novo.value;
+    atualizarResumo();
+  }
+}
+
+// ===== PASSO 2: TAMANHO =====
+function atualizarTamanho(input){
+  const card = input.closest('.opcao');
+  precoBase = parseFloat(card.dataset.preco);
+  limiteFrutas = parseInt(card.dataset.frutas);
+  limiteAcomp = parseInt(card.dataset.acomp);
+  tamanhoEscolhido = input.value;
+
+  document.getElementById('aviso-frutas').textContent = 'Escolha até ' + limiteFrutas + ' fruta(s)';
+  document.getElementById('aviso-acomp').textContent = 'Escolha até ' + limiteAcomp + ' acompanhamento(s)';
+  document.getElementById('frutas').classList.remove('bloqueado');
+  document.getElementById('acompanhamentos').classList.remove('bloqueado');
+
+  // limpa frutas/acomp e reseta estado disabled (mantem esgotados)
+  document.querySelectorAll('.chk-fruta, .chk-acomp').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.opcao').classList.remove('selecionado');
+    if(!cb.disabled){ cb.disabled = false; cb.closest('.opcao').classList.remove('bloqueado'); }
+  });
+  atualizarResumo();
+}
+
+// ===== LIMITES FRUTAS / ACOMP =====
+function atualizarLimites(){
+  const frutasSel = document.querySelectorAll('.chk-fruta:checked').length;
+  const acompSel = document.querySelectorAll('.chk-acomp:checked').length;
+
+  document.querySelectorAll('.chk-fruta').forEach(cb => {
+    if(cb.disabled && !cb.closest('.opcao').classList.contains('indisponivel')){
+      // foi bloqueado por limite, nao por esgotado
+      if(frutasSel < limiteFrutas){ cb.disabled = false; cb.closest('.opcao').classList.remove('bloqueado'); }
+    } else if(!cb.closest('.opcao').classList.contains('indisponivel')){
+      if(frutasSel >= limiteFrutas && !cb.checked){ cb.disabled = true; cb.closest('.opcao').classList.add('bloqueado'); }
+    }
+  });
+
+  document.querySelectorAll('.chk-acomp').forEach(cb => {
+    if(cb.disabled && !cb.closest('.opcao').classList.contains('indisponivel')){
+      if(acompSel < limiteAcomp){ cb.disabled = false; cb.closest('.opcao').classList.remove('bloqueado'); }
+    } else if(!cb.closest('.opcao').classList.contains('indisponivel')){
+      if(acompSel >= limiteAcomp && !cb.checked){ cb.disabled = true; cb.closest('.opcao').classList.add('bloqueado'); }
+    }
+  });
+
+  atualizarResumo();
+}
+
+// ===== RESUMO + BOTAO =====
+function atualizarResumo(){
+  atualizarVisualAdicional();
+  const sabores = Array.from(document.querySelectorAll('input[name="sabor"]:checked')).map(i => i.value);
+  const frutas = Array.from(document.querySelectorAll('.chk-fruta:checked')).map(i => i.value);
+  const acomp = Array.from(document.querySelectorAll('.chk-acomp:checked')).map(i => i.value);
+  const cobert = Array.from(document.querySelectorAll('.chk-cobert:checked')).map(i => i.value);
+  const adicional = document.getElementById('adicional-leite').checked;
+  const pag = document.querySelector('input[name="pagamento"]:checked');
+  formaPagamento = pag ? pag.value : '';
+  const rec = document.querySelector('input[name="recebimento"]:checked');
+  formaRecebimento = rec ? rec.value : '';
+
+  let total = precoBase + (adicional ? 2 : 0);
+  const resumo = document.getElementById('resumo');
+  const btn = document.getElementById('btn-enviar');
+
+  if(sabores.length === 0 || !tamanhoEscolhido){
+    resumo.innerHTML = '<p style="color:#FACC15;font-style:italic">Escolha o sabor e o tamanho para começar...</p>';
+    document.getElementById('total').textContent = 'R$ 0,00';
+    btn.disabled = true; btn.className = 'btn-enviar travado';
+    btn.innerHTML = '<i class="fa fa-whatsapp"></i> Monte seu pedido primeiro';
+    return;
+  }
+
+  const f = frutas.length ? '<strong>' + frutas.join(', ') + '</strong>' : 'Nenhum';
+  const a = acomp.length ? '<strong>' + acomp.join(', ') + '</strong>' : 'Nenhum';
+  const c = cobert.length ? '<strong>' + cobert.join(', ') + '</strong>' : 'Nenhuma';
+  const ad = adicional ? '<strong>Sim</strong>' : 'Não';
+  const p = formaPagamento ? '<strong>' + formaPagamento + '</strong>' : 'Ainda não escolhida';
+  const r = formaRecebimento ? '<strong>' + formaRecebimento + '</strong>' : 'Ainda não escolhido';
+
+  resumo.innerHTML =
+    '<p>◆ Sabor e tamanho: <strong>' + sabores.join(' / ') + ' — ' + tamanhoEscolhido + '</strong></p>' +
+    '<p>◆ Frutas: ' + f + '</p>' +
+    '<p>◆ Acompanhamentos: ' + a + '</p>' +
+    '<p>◆ Coberturas: ' + c + '</p>' +
+    '<p>◆ Adicional de Leite Condensado: ' + ad + '</p>' +
+    '<p style="margin-top:8px">◆ Recebimento: ' + r + '</p>' +
+    '<p>◆ Forma de Pagamento: ' + p + '</p>';
+
+  document.getElementById('total').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+
+  if(formaPagamento && formaRecebimento){
+    btn.disabled = false; btn.className = 'btn-enviar liberado';
+    btn.innerHTML = '<i class="fa fa-whatsapp"></i> Enviar Pedido no WhatsApp';
+  } else {
+    btn.disabled = true; btn.className = 'btn-enviar travado';
+    btn.innerHTML = '<i class="fa fa-whatsapp"></i> ' + (!formaRecebimento ? 'Escolha entrega ou retirada' : 'Escolha a forma de pagamento');
+  }
+}
+
+// ===== WHATSAPP =====
+function enviarWhatsApp(){
+  const sabores = Array.from(document.querySelectorAll('input[name="sabor"]:checked')).map(i => i.value);
+  const frutas = Array.from(document.querySelectorAll('.chk-fruta:checked')).map(i => i.value);
+  const acomp = Array.from(document.querySelectorAll('.chk-acomp:checked')).map(i => i.value);
+  const cobert = Array.from(document.querySelectorAll('.chk-cobert:checked')).map(i => i.value);
+  const adicional = document.getElementById('adicional-leite').checked;
+  const total = precoBase + (adicional ? 2 : 0);
+
+  // *texto* = negrito no WhatsApp. Tudo que o cliente escolheu vai em negrito.
+  const neg = (lista, vazio) => lista.length ? '*' + lista.join(', ') + '*' : vazio;
+
+  const linhas = [
+    '◆ SEU PEDIDO',
+    '◆ Sabor e tamanho: *' + sabores.join(' / ') + ' ' + tamanhoEscolhido + '*',
+    '◆ Frutas: ' + neg(frutas, 'Nenhum'),
+    '◆ Acompanhamentos: ' + neg(acomp, 'Nenhum'),
+    '◆ Coberturas: ' + neg(cobert, 'Nenhuma'),
+    '◆ Adicional de Leite Condensado: ' + (adicional ? '*Sim*' : 'Não'),
+    '◆ Recebimento: *' + formaRecebimento + '*',
+    '◆ Forma de Pagamento: *' + formaPagamento + '*',
+    '◆ Total: *R$ ' + total.toFixed(2).replace('.', ',') + '*',
+    'Olá! Gostaria de confirmar meu pedido! ◆'
+  ];
+  // linha em branco entre cada frase
+  const msg = linhas.join('\n\n');
+
+  const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
+}
+
+// ===== FECHA PAINEL AO CLICAR FORA =====
+document.addEventListener('click', function(e){
+  const painel = document.getElementById('painel');
+  const eng = document.querySelector('.engrenagem');
+  // composedPath guarda o caminho do clique mesmo se o botao clicado foi recriado (re-render do painel)
+  const caminho = e.composedPath ? e.composedPath() : [];
+  const dentro = caminho.includes(painel) || painel.contains(e.target);
+  const naEngrenagem = caminho.includes(eng) || eng.contains(e.target);
+  if(!dentro && !naEngrenagem) painel.classList.remove('aberto');
+});
+
+// ===== INICIALIZA =====
+aplicarDisponibilidade();
+montarBotoesControle();
+</script>
+</body>
+</html>
