@@ -39,6 +39,9 @@ tailwind.config = {
   .opcao { background-color: #4A1599; border: 2px solid #5A189A; border-radius: 12px; padding: 12px; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 8px; user-select: none; }
   .opcao:hover { border-color: #7B2CBF; background-color: #5A189A; }
   .opcao.selecionado { border: 3px solid #FACC15; background-color: rgba(250,204,21,0.25); box-shadow: 0 0 14px rgba(250,204,21,0.6); transform: scale(1.02); }
+  .campo-nome { width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: 12px; border: 2px solid #7B2CBF; background: #4A1599; color: #FACC15; font-size: 17px; font-weight: 700; font-family: inherit; outline: none; transition: all .2s; }
+  .campo-nome::placeholder { color: #FACC15; opacity: .5; font-weight: 400; }
+  .campo-nome:focus { border-color: #FACC15; box-shadow: 0 0 10px rgba(250,204,21,.4); }
   .abas-tamanho { display: flex; gap: 8px; margin-bottom: 12px; }
   .aba { flex: 1; padding: 10px 12px; border-radius: 999px; border: 2px solid #5A189A; background: #4A1599; color: #FACC15; font-weight: 700; font-size: 15px; cursor: pointer; transition: all .2s; }
   .aba:hover { border-color: #FACC15; }
@@ -189,11 +192,11 @@ tailwind.config = {
     <h2 class="titulo" style="font-size:22px;margin:0 0 6px">3. Escolha as Frutas</h2>
     <p id="aviso-frutas" style="font-size:13px;color:#FACC15;margin:0 0 12px">Escolha o tamanho primeiro</p>
     <div id="frutas" class="bloqueado" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-      <label class="opcao" data-tipo="fruta" data-nome="Banana"><input type="checkbox" class="chk-fruta" value="Banana" onchange="atualizarLimites()"><span>🍌 Banana</span></label>
-      <label class="opcao" data-tipo="fruta" data-nome="Uva Verde"><input type="checkbox" class="chk-fruta" value="Uva Verde" onchange="atualizarLimites()"><span>🍇 Uva Verde</span></label>
-      <label class="opcao" data-tipo="fruta" data-nome="Morango"><input type="checkbox" class="chk-fruta" value="Morango" onchange="atualizarLimites()"><span>🍓 Morango</span></label>
-      <label class="opcao" data-tipo="fruta" data-nome="Manga"><input type="checkbox" class="chk-fruta" value="Manga" onchange="atualizarLimites()"><span>🥭 Manga</span></label>
-      <label class="opcao" data-tipo="fruta" data-nome="Abacaxi"><input type="checkbox" class="chk-fruta" value="Abacaxi" onchange="atualizarLimites()"><span>🍍 Abacaxi</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Banana"><input type="checkbox" class="chk-fruta" value="Banana" onchange="atualizarLimites(this)"><span>🍌 Banana</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Uva Verde"><input type="checkbox" class="chk-fruta" value="Uva Verde" onchange="atualizarLimites(this)"><span>🍇 Uva Verde</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Morango"><input type="checkbox" class="chk-fruta" value="Morango" onchange="atualizarLimites(this)"><span>🍓 Morango</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Manga"><input type="checkbox" class="chk-fruta" value="Manga" onchange="atualizarLimites(this)"><span>🥭 Manga</span></label>
+      <label class="opcao" data-tipo="fruta" data-nome="Abacaxi"><input type="checkbox" class="chk-fruta" value="Abacaxi" onchange="atualizarLimites(this)"><span>🍍 Abacaxi</span></label>
     </div>
   </div>
 
@@ -202,15 +205,15 @@ tailwind.config = {
     <h2 class="titulo" style="font-size:22px;margin:0 0 6px">4. Escolha os Acompanhamentos</h2>
     <p id="aviso-acomp" style="font-size:13px;color:#FACC15;margin:0 0 12px">Escolha o tamanho primeiro</p>
     <div id="acompanhamentos" class="bloqueado" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-      <label class="opcao" data-tipo="acomp" data-nome="Leite em Pó"><input type="checkbox" class="chk-acomp" value="Leite em Pó" onchange="atualizarLimites()"><span>🥛 Leite em Pó</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Paçoca"><input type="checkbox" class="chk-acomp" value="Paçoca" onchange="atualizarLimites()"><span>🥜 Paçoca</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Amendoim"><input type="checkbox" class="chk-acomp" value="Amendoim" onchange="atualizarLimites()"><span>🥜 Amendoim</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Ovomaltine"><input type="checkbox" class="chk-acomp" value="Ovomaltine" onchange="atualizarLimites()"><span>🍫 Ovomaltine</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Sucrilhos"><input type="checkbox" class="chk-acomp" value="Sucrilhos" onchange="atualizarLimites()"><span>🥣 Sucrilhos</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Chocoboll"><input type="checkbox" class="chk-acomp" value="Chocoboll" onchange="atualizarLimites()"><span>🍫 Chocoboll</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Granola"><input type="checkbox" class="chk-acomp" value="Granola" onchange="atualizarLimites()"><span>🌾 Granola</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Granulado"><input type="checkbox" class="chk-acomp" value="Granulado" onchange="atualizarLimites()"><span>✨ Granulado</span></label>
-      <label class="opcao" data-tipo="acomp" data-nome="Confete"><input type="checkbox" class="chk-acomp" value="Confete" onchange="atualizarLimites()"><span>🎉 Confete</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Leite em Pó"><input type="checkbox" class="chk-acomp" value="Leite em Pó" onchange="atualizarLimites(this)"><span>🥛 Leite em Pó</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Paçoca"><input type="checkbox" class="chk-acomp" value="Paçoca" onchange="atualizarLimites(this)"><span>🥜 Paçoca</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Amendoim"><input type="checkbox" class="chk-acomp" value="Amendoim" onchange="atualizarLimites(this)"><span>🥜 Amendoim</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Ovomaltine"><input type="checkbox" class="chk-acomp" value="Ovomaltine" onchange="atualizarLimites(this)"><span>🍫 Ovomaltine</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Sucrilhos"><input type="checkbox" class="chk-acomp" value="Sucrilhos" onchange="atualizarLimites(this)"><span>🥣 Sucrilhos</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Chocoboll"><input type="checkbox" class="chk-acomp" value="Chocoboll" onchange="atualizarLimites(this)"><span>🍫 Chocoboll</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Granola"><input type="checkbox" class="chk-acomp" value="Granola" onchange="atualizarLimites(this)"><span>🌾 Granola</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Granulado"><input type="checkbox" class="chk-acomp" value="Granulado" onchange="atualizarLimites(this)"><span>✨ Granulado</span></label>
+      <label class="opcao" data-tipo="acomp" data-nome="Confete"><input type="checkbox" class="chk-acomp" value="Confete" onchange="atualizarLimites(this)"><span>🎉 Confete</span></label>
     </div>
   </div>
 
@@ -250,6 +253,13 @@ tailwind.config = {
     </div>
   </div>
 
+  <!-- PASSO 8: NOME -->
+  <div class="card">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">8. Seu Nome</h2>
+    <p style="font-size:13px;margin:0 0 12px">Para identificarmos o seu pedido</p>
+    <input type="text" id="nome-cliente" maxlength="40" placeholder="Digite seu nome" autocomplete="name" oninput="atualizarResumo()" class="campo-nome">
+  </div>
+
   <!-- RESUMO -->
   <div class="card" style="background:#2D0C5E;border-color:#7B2CBF">
     <h2 class="titulo" style="font-size:22px;margin:0 0 14px">SEU PEDIDO</h2>
@@ -271,7 +281,9 @@ tailwind.config = {
 <script>
 // ===== ESTADO =====
 let precoBase = 0, limiteFrutas = 0, limiteAcomp = 0;
-let tamanhoEscolhido = '', formaPagamento = '', formaRecebimento = '';
+// memoria do que o cliente escolheu (na ordem), para restaurar ao trocar de tamanho
+let memFrutas = [], memAcomp = [];
+let tamanhoEscolhido = '', formaPagamento = '', formaRecebimento = '', nomeCliente = '';
 
 // ===== PAINEL DE CONTROLE =====
 function alternarPainel(){ document.getElementById('painel').classList.toggle('aberto'); }
@@ -296,6 +308,7 @@ function alternarDisponibilidade(tipo, nome){
 }
 
 function aplicarDisponibilidade(){
+  let saborRemovido = false;
   document.querySelectorAll('[data-tipo]').forEach(el => {
     const tipo = el.dataset.tipo, nome = el.dataset.nome;
     const input = el.querySelector('input');
@@ -306,16 +319,25 @@ function aplicarDisponibilidade(){
         t.className = 'tag-esgotado'; t.textContent = 'ESGOTADO';
         el.appendChild(t);
       }
-      if(input){ input.checked = false; input.disabled = true; }
+      if(input){
+        // se o cliente ja tinha escolhido, tira a escolha (visual e memoria) para nao ficar travado
+        if(input.checked && input.name === 'sabor') saborRemovido = true;
+        input.checked = false; input.disabled = true;
+        el.classList.remove('selecionado', 'bloqueado');
+        if(input.classList.contains('chk-fruta')) memFrutas = memFrutas.filter(n => n !== input.value);
+        if(input.classList.contains('chk-acomp')) memAcomp = memAcomp.filter(n => n !== input.value);
+      }
     } else {
       el.classList.remove('indisponivel');
       const t = el.querySelector('.tag-esgotado'); if(t) t.remove();
-      if(input) input.disabled = false;
+      if(input){ input.disabled = false; el.classList.remove('bloqueado'); }
     }
   });
-  atualizarResumo();
+  // recalcula os bloqueios por limite (libera as outras opcoes) e os itens ligados
+  if(typeof sincronizarLeite === 'function') sincronizarLeite();
+  if(saborRemovido) atualizarSabor();
+  atualizarLimites();
 }
-
 function montarBotoesControle(){
   const container = document.getElementById('botoes-controle');
   const grupos = [
@@ -397,6 +419,7 @@ function resetarTudoAposSabor(){
 }
 
 function limparSelecoes(){
+  memFrutas = []; memAcomp = [];
   document.querySelectorAll('.chk-fruta, .chk-acomp, .chk-cobert').forEach(cb => { if(!cb.disabled){ cb.checked = false; cb.closest('.opcao').classList.remove('selecionado'); } });
   const al = document.getElementById('adicional-leite'); al.checked = false;
   document.querySelectorAll('input[name="pagamento"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
@@ -441,17 +464,33 @@ function atualizarTamanho(input){
   document.getElementById('frutas').classList.remove('bloqueado');
   document.getElementById('acompanhamentos').classList.remove('bloqueado');
 
-  // limpa frutas/acomp e reseta estado disabled (mantem esgotados)
-  document.querySelectorAll('.chk-fruta, .chk-acomp').forEach(cb => {
-    cb.checked = false;
-    cb.closest('.opcao').classList.remove('selecionado');
-    if(!cb.disabled){ cb.disabled = false; cb.closest('.opcao').classList.remove('bloqueado'); }
-  });
-  atualizarResumo();
+  // restaura o que o cliente ja tinha escolhido (respeitando o limite do novo tamanho)
+  function restaurar(classe, memoria, limite){
+    const cbs = Array.from(document.querySelectorAll(classe));
+    cbs.forEach(cb => { cb.checked = false; cb.closest('.opcao').classList.remove('selecionado'); });
+    let marcados = 0;
+    memoria.forEach(nome => {
+      const cb = cbs.find(c => c.value === nome);
+      if(!cb || marcados >= limite) return;
+      if(cb.closest('.opcao').classList.contains('indisponivel')) return; // esgotado
+      cb.disabled = false; cb.closest('.opcao').classList.remove('bloqueado');
+      cb.checked = true; cb.closest('.opcao').classList.add('selecionado');
+      marcados++;
+    });
+  }
+  restaurar('.chk-fruta', memFrutas, limiteFrutas);
+  restaurar('.chk-acomp', memAcomp, limiteAcomp);
+  atualizarLimites();
 }
 
 // ===== LIMITES FRUTAS / ACOMP =====
-function atualizarLimites(){
+function atualizarLimites(el){
+  if(el){
+    const mem = el.classList.contains('chk-fruta') ? memFrutas : memAcomp;
+    const i = mem.indexOf(el.value);
+    if(el.checked && i < 0) mem.push(el.value);
+    if(!el.checked && i >= 0) mem.splice(i, 1);
+  }
   const frutasSel = document.querySelectorAll('.chk-fruta:checked').length;
   const acompSel = document.querySelectorAll('.chk-acomp:checked').length;
 
@@ -487,6 +526,7 @@ function atualizarResumo(){
   formaPagamento = pag ? pag.value : '';
   const rec = document.querySelector('input[name="recebimento"]:checked');
   formaRecebimento = rec ? rec.value : '';
+  nomeCliente = document.getElementById('nome-cliente').value.trim();
 
   let total = precoBase + (adicional ? 2 : 0);
   const resumo = document.getElementById('resumo');
@@ -512,18 +552,20 @@ function atualizarResumo(){
     '<p>◆ Frutas: ' + f + '</p>' +
     '<p>◆ Acompanhamentos: ' + a + '</p>' +
     '<p>◆ Coberturas: ' + c + '</p>' +
-    '<p>◆ Adicional de Leite Condensado: ' + ad + '</p>' +
+    (adicional ? '<p>◆ Adicional de Leite Condensado: <strong>Sim</strong></p>' : '') +
     '<p style="margin-top:8px">◆ Recebimento: ' + r + '</p>' +
-    '<p>◆ Forma de Pagamento: ' + p + '</p>';
+    '<p>◆ Forma de Pagamento: ' + p + '</p>' +
+    '<p>◆ Nome: ' + (nomeCliente ? '<strong>' + nomeCliente.replace(/</g,'&lt;') + '</strong>' : 'Ainda não informado') + '</p>';
 
   document.getElementById('total').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
 
-  if(formaPagamento && formaRecebimento){
+  if(formaPagamento && formaRecebimento && nomeCliente){
     btn.disabled = false; btn.className = 'btn-enviar liberado';
     btn.innerHTML = '<i class="fa fa-whatsapp"></i> Enviar Pedido no WhatsApp';
   } else {
     btn.disabled = true; btn.className = 'btn-enviar travado';
-    btn.innerHTML = '<i class="fa fa-whatsapp"></i> ' + (!formaRecebimento ? 'Escolha entrega ou retirada' : 'Escolha a forma de pagamento');
+    const falta = !formaRecebimento ? 'Escolha entrega ou retirada' : (!formaPagamento ? 'Escolha a forma de pagamento' : 'Digite seu nome');
+    btn.innerHTML = '<i class="fa fa-whatsapp"></i> ' + falta;
   }
 }
 
@@ -540,19 +582,19 @@ function enviarWhatsApp(){
   const neg = (lista, vazio) => lista.length ? '*' + lista.join(', ') + '*' : vazio;
 
   const linhas = [
-    '◆ SEU PEDIDO',
+    '◆ PEDIDO DE *' + nomeCliente + '*',
     '◆ Sabor e tamanho: *' + sabores.join(' / ') + ' ' + tamanhoEscolhido + '*',
     '◆ Frutas: ' + neg(frutas, 'Nenhum'),
     '◆ Acompanhamentos: ' + neg(acomp, 'Nenhum'),
     '◆ Coberturas: ' + neg(cobert, 'Nenhuma'),
-    '◆ Adicional de Leite Condensado: ' + (adicional ? '*Sim*' : 'Não'),
+    adicional ? '◆ Adicional de Leite Condensado: *Sim*' : null,
     '◆ Recebimento: *' + formaRecebimento + '*',
     '◆ Forma de Pagamento: *' + formaPagamento + '*',
     '◆ Total: *R$ ' + total.toFixed(2).replace('.', ',') + '*',
     'Olá! Gostaria de confirmar meu pedido! ◆'
   ];
   // linha em branco entre cada frase
-  const msg = linhas.join('\n\n');
+  const msg = linhas.filter(Boolean).join('\n\n');
 
   const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(msg);
   window.open(url, '_blank');
