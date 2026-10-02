@@ -295,6 +295,11 @@ tailwind.config = {
     <p style="font-size:13px;margin:12px 0 4px">Chave Pix: <strong id="pix-chave"></strong></p>
     <textarea class="campo-nome" id="pix-codigo" rows="3" readonly style="font-size:12px;font-weight:400"></textarea>
     <button type="button" class="btn-add" style="margin:10px 0 0" onclick="copiarPix()">📋 Copiar código Pix (copia e cola)</button>
+    <div style="border-top:1px solid #5A189A;margin-top:16px;padding-top:16px">
+      <p id="pix-pergunta" style="font-weight:700;font-size:17px;margin:0 0 10px">Você já enviou o Pix?</p>
+      <button type="button" id="btn-pix-ok" class="btn-add" style="margin:0" onclick="confirmarPix()">✅ Sim, já enviei o Pix</button>
+      <p style="font-size:12px;margin:8px 0 0;opacity:.85">O botão de enviar o pedido só libera depois da confirmação. Se o valor do pedido mudar, confirme de novo.</p>
+    </div>
   </div>
 
   <div class="card" id="bloco-troco" style="display:none">
@@ -740,11 +745,20 @@ function brCodePix(valor){
     f('62', f('05', '***')) + '6304';
   return base + crc16(base);
 }
-let pixAtual = '';
+let pixAtual = '', pixConfirmado = false;
+function visualConfirmaPix(){
+  const b = document.getElementById('btn-pix-ok'), q = document.getElementById('pix-pergunta');
+  if(!b || !q) return;
+  q.textContent = pixConfirmado ? 'Pix confirmado! Agora é só enviar o pedido.' : 'Você já enviou o Pix?';
+  b.textContent = pixConfirmado ? '✔ Pix confirmado (toque para desfazer)' : '✅ Sim, já enviei o Pix';
+  b.style.background = pixConfirmado ? '#22C55E' : ''; b.style.color = pixConfirmado ? '#fff' : ''; b.style.borderColor = pixConfirmado ? '#22C55E' : '';
+}
+function confirmarPix(){ pixConfirmado = !pixConfirmado; visualConfirmaPix(); atualizarResumo(); }
 function atualizarPix(total){
   const box = document.getElementById('bloco-pix');
-  if(!PIX_CHAVE || formaPagamento !== 'Pix' || total <= 0){ box.style.display = 'none'; pixAtual = ''; return; }
+  if(!PIX_CHAVE || formaPagamento !== 'Pix' || total <= 0){ box.style.display = 'none'; pixAtual = ''; pixConfirmado = false; visualConfirmaPix(); return; }
   const codigo = brCodePix(total);
+  if(codigo !== pixAtual){ pixConfirmado = false; visualConfirmaPix(); } // valor mudou (copo, bairro...): precisa confirmar de novo
   box.style.display = 'block';
   document.getElementById('pix-valor').textContent = reais(total);
   document.getElementById('pix-chave').textContent = PIX_EXIBIR;
@@ -893,7 +907,7 @@ function atualizarResumo(){
   if(d.obs) h += '<p>◆ Observações: ' + B(d.obs) + '</p>';
   h += '<p>◆ Nome: ' + (nomeCliente ? B(nomeCliente) : 'Ainda não informado') + '</p>';
   resumo.innerHTML = h;
-  const falta = !formaRecebimento ? 'Escolha entrega ou retirada' : !d.endOk ? 'Preencha o endereço' : !formaPagamento ? 'Escolha a forma de pagamento' : !nomeCliente ? 'Digite seu nome' : '';
+  const falta = !formaRecebimento ? 'Escolha entrega ou retirada' : !d.endOk ? 'Preencha o endereço' : !formaPagamento ? 'Escolha a forma de pagamento' : !nomeCliente ? 'Digite seu nome' : (PIX_CHAVE && formaPagamento === 'Pix' && !pixConfirmado) ? 'Pague o Pix e confirme acima' : '';
   btn.disabled = !!falta; btn.className = 'btn-enviar ' + (falta ? 'travado' : 'liberado');
   btn.innerHTML = '<i class="fa fa-whatsapp"></i> ' + (falta || 'Enviar Pedido no WhatsApp');
   aplicarLoja();
@@ -918,7 +932,7 @@ async function enviarWhatsApp(){
   if(d.entrega) L.push('◆ Endereço: ' + B(d.end));
   if(d.entrega && taxa > 0) L.push('◆ Taxa de entrega: ' + B(reais(taxa)));
   L.push('◆ Forma de Pagamento: ' + B(formaPagamento));
-  if(PIX_CHAVE && formaPagamento === 'Pix') L.push('◆ Pix de ' + B(reais(total)) + ': vou enviar o comprovante em seguida');
+  if(PIX_CHAVE && formaPagamento === 'Pix') L.push('◆ Pix de ' + B(reais(total)) + ': já enviei, vou mandar o comprovante em seguida');
   if(d.troco) L.push('◆ Troco para: ' + B('R$ ' + d.troco));
   if(d.obs) L.push('◆ Observações: ' + B(d.obs));
   L.push('◆ Total: ' + B(reais(total)), 'Olá! Gostaria de confirmar meu pedido! ◆');
