@@ -348,6 +348,7 @@ function alternarPainel(){
   // pede a senha TODA vez que for abrir (fechar não pede)
   if(!p.classList.contains('aberto') && prompt('Senha do painel:') !== PIN_PAINEL) return;
   p.classList.toggle('aberto');
+  if(p.classList.contains('aberto')) atualizarPedidosHoje();
 }
 
 function carregarDisponibilidade(){
@@ -360,7 +361,8 @@ function salvarDisponibilidade(d){
   localStorage.setItem('disp_acai', JSON.stringify(d));
   if(!FIREBASE_URL) return;
   ultimoSalvar = Date.now();
-  fetch(FIREBASE_URL + '/disp_acai.json', { method: 'PUT', body: JSON.stringify(d) })
+  const { contador, ...resto } = d; // o contador de pedidos é gravado à parte, não pode ser sobrescrito
+  fetch(FIREBASE_URL + '/disp_acai.json', { method: 'PATCH', body: JSON.stringify(resto) })
     .then(r => { if(!r.ok) alert('Não foi possível salvar para todos os clientes. No Firebase, confira se as regras foram publicadas (erro ' + r.status + ').'); })
     .catch(() => alert('Sem conexão: o esgotado não foi enviado para os clientes.'));
 }
@@ -368,11 +370,37 @@ async function sincronizarRemoto(){
   if(!FIREBASE_URL || Date.now() - ultimoSalvar < 6000) return; // espera o envio terminar antes de reler
   try{
     const d = (await (await fetch(FIREBASE_URL + '/disp_acai.json')).json()) || {};
+    delete d.contador;
     if(JSON.stringify(d) === localStorage.getItem('disp_acai')) return;
     localStorage.setItem('disp_acai', JSON.stringify(d));
     aplicarDisponibilidade(); montarBotoesControle();
   }catch(e){}
 }
+
+// ===== NÚMERO DO PEDIDO: contagem do dia, reinicia à meia-noite (horário de Brasília) =====
+const diaBR = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()); // AAAA-MM-DD
+async function proximoNumeroPedido(){
+  const url = FIREBASE_URL + '/disp_acai/contador/' + diaBR() + '.json';
+  try{
+    let n = await (await fetch(url, { method: 'PUT', body: JSON.stringify({ '.sv': { increment: 1 } }) })).json();
+    if(typeof n !== 'number') n = await (await fetch(url)).json();
+    if(typeof n === 'number') return String(n);
+  }catch(e){}
+  const k = 'pedido_local_' + diaBR(), n = (Number(localStorage.getItem(k)) || 0) + 1; // plano B: contagem só neste aparelho
+  try{ localStorage.setItem(k, n); }catch(e){}
+  return String(n);
+}
+async function atualizarPedidosHoje(){
+  const el = document.getElementById('pedidos-hoje'); if(!el) return;
+  const [ano, mes, dia] = diaBR().split('-');
+  const rotulo = 'Pedidos de hoje (' + dia + '/' + mes + '): ';
+  if(!FIREBASE_URL){ el.textContent = rotulo + '—'; return; }
+  try{
+    const n = await (await fetch(FIREBASE_URL + '/disp_acai/contador/' + diaBR() + '.json')).json();
+    el.textContent = rotulo + (typeof n === 'number' ? n : 0); // o dia muda à meia-noite, então a contagem recomeça em 0
+  }catch(e){ el.textContent = rotulo + '—'; }
+}
+setInterval(() => { if(document.getElementById('painel').classList.contains('aberto')) atualizarPedidosHoje(); }, 15000);
 
 // ===== HORÁRIO AUTOMÁTICO (13:00 às 22:00, horário de Brasília) + FECHAR/ABRIR MANUAL =====
 const HORA_ABRE = 13, HORA_FECHA = 22;
@@ -514,7 +542,9 @@ function montarBotoesControle(){
     return h + '</div>';
   };
   html += `<p style="font-weight:700;color:#FACC15;margin:14px 0 0;font-size:13px">Preços (R$)</p>` + pr('t', 'Tradicional', 'grade-tradicional') + pr('n', 'Com Nutella', 'grade-nutella') + `<button class="btn-ctrl ok" style="width:100%;padding:12px;margin-top:10px" onclick="salvarPrecos()">💾 Salvar preços</button>`;
+  html = `<p id=\"pedidos-hoje\" style=\"font-weight:700;color:#2D0C5E;background:#FACC15;border-radius:10px;padding:8px 12px;margin:0 0 8px;font-size:15px\">Pedidos de hoje: ...</p>` + html;
   container.innerHTML = html;
+  atualizarPedidosHoje();
 }
 
 function atualizarVisualAdicional(){
@@ -792,24 +822,6 @@ function atualizarResumo(){
   aplicarLoja();
 }
 
-// ===== NÚMERO DO PEDIDO: contagem do dia (1, 2, 3...) que reinicia à meia-noite (horário de Brasília) =====
-async function proximoPedido(){
-  const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
-  try{
-    if(!FIREBASE_URL) throw 0;
-    const u = FIREBASE_URL + '/contador_pedidos/' + dia + '.json';
-    const r = await fetch(u, { method: 'PUT', body: JSON.stringify({ '.sv': { increment: 1 } }) });
-    if(!r.ok) throw 0;
-    let n = await r.json();
-    if(typeof n !== 'number') n = await (await fetch(u)).json();
-    if(typeof n === 'number') return n;
-  }catch(e){}
-  // plano B (se o Firebase não responder): contagem só neste aparelho
-  const k = 'pedido_local_' + dia, n = (Number(localStorage.getItem(k)) || 0) + 1;
-  try{ localStorage.setItem(k, n); }catch(e){}
-  return n;
-}
-
 // ===== WHATSAPP =====
 async function enviarWhatsApp(){
   atualizarResumo();
@@ -819,7 +831,7 @@ async function enviarWhatsApp(){
   const janela = window.open('', '_blank'); // abre antes para o navegador não bloquear
   const d = dadosPedido(), copos = todosCopos(), B = t => '*' + t + '*';
   const total = copos.reduce((t, c) => t + precoCopo(c), 0);
-  const numero = await proximoPedido();
+  const numero = await proximoNumeroPedido();
   const L = ['◆ PEDIDO ' + B('#' + numero) + ' DE ' + B(nomeCliente)];
   copos.forEach((c, i) => {
     if(copos.length > 1) L.push('◆ ' + B('COPO ' + (i + 1)));
@@ -834,6 +846,7 @@ async function enviarWhatsApp(){
   L.push('◆ Total: ' + B(reais(total)), 'Olá! Gostaria de confirmar meu pedido! ◆');
   const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(L.join('\n\n'));
   if(janela) janela.location.href = url; else location.href = url;
+  atualizarPedidosHoje();
   atualizarResumo();
 }
 
