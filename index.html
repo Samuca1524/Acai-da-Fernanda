@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Açaí da Fernanda | Monte seu Pedido</title>
 <meta name="description" content="Monte seu açaí, cupuaçu ou mangaba e peça pelo WhatsApp. Entrega em domicílio!">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <meta name="color-scheme" content="only light">
 <meta name="darkreader-lock">
 <style>:root { color-scheme: only light; }</style>
@@ -283,6 +284,15 @@ tailwind.config = {
       <label class="opcao"><input type="radio" name="pagamento" value="Cartão de Crédito" onchange="atualizarResumo()"><span>💳 Crédito</span></label>
       <label class="opcao"><input type="radio" name="pagamento" value="Cartão de Débito" onchange="atualizarResumo()"><span>🏧 Débito</span></label>
     </div>
+  </div>
+
+  <div class="card" id="bloco-pix" style="display:none;text-align:center">
+    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">Pague com Pix</h2>
+    <p style="font-size:14px;margin:0 0 12px">Valor: <strong id="pix-valor"></strong> — pague e envie o comprovante no WhatsApp</p>
+    <div id="pix-qr" style="display:inline-block;background:#fff;padding:10px;border-radius:12px"></div>
+    <p style="font-size:13px;margin:12px 0 4px">Chave Pix: <strong id="pix-chave"></strong></p>
+    <textarea class="campo-nome" id="pix-codigo" rows="3" readonly style="font-size:12px;font-weight:400"></textarea>
+    <button type="button" class="btn-add" style="margin:10px 0 0" onclick="copiarPix()">📋 Copiar código Pix (copia e cola)</button>
   </div>
 
   <div class="card" id="bloco-troco" style="display:none">
@@ -581,6 +591,50 @@ function atualizarLimites(el){
 }
 
 // ===== RESUMO + BOTAO =====
+// ===== PIX (copia e cola com valor) =====
+const PIX_CHAVE = '+5511979908372';
+const PIX_EXIBIR = '(11) 97990-8372'; // como aparece para o cliente            // <<< coloque aqui a chave Pix (CPF, CNPJ, e-mail, +55DDDNUMERO ou chave aleatória)
+const PIX_NOME = 'FERNANDA PUTI SANTOS'; // até 25 letras, sem acento
+const PIX_CIDADE = 'ITAQUAQUECETUBA';      // até 15 letras, sem acento
+function crc16(str){
+  let crc = 0xFFFF;
+  for(let i = 0; i < str.length; i++){
+    crc ^= str.charCodeAt(i) << 8;
+    for(let j = 0; j < 8; j++) crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+function brCodePix(valor){
+  const f = (id, v) => id + String(v.length).padStart(2, '0') + v;
+  const sem = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  const conta = f('00', 'br.gov.bcb.pix') + f('01', PIX_CHAVE.trim());
+  const base = f('00', '01') + f('01', '11') + f('26', conta) + f('52', '0000') + f('53', '986') +
+    f('54', valor.toFixed(2)) + f('58', 'BR') + f('59', sem(PIX_NOME).slice(0, 25)) + f('60', sem(PIX_CIDADE).slice(0, 15)) +
+    f('62', f('05', '***')) + '6304';
+  return base + crc16(base);
+}
+let pixAtual = '';
+function atualizarPix(total){
+  const box = document.getElementById('bloco-pix');
+  if(!PIX_CHAVE || formaPagamento !== 'Pix' || total <= 0){ box.style.display = 'none'; pixAtual = ''; return; }
+  const codigo = brCodePix(total);
+  box.style.display = 'block';
+  document.getElementById('pix-valor').textContent = reais(total);
+  document.getElementById('pix-chave').textContent = PIX_EXIBIR;
+  document.getElementById('pix-codigo').value = codigo;
+  if(codigo !== pixAtual){
+    pixAtual = codigo;
+    const q = document.getElementById('pix-qr');
+    try{ const qr = qrcode(0, 'M'); qr.addData(codigo); qr.make(); q.innerHTML = qr.createImgTag(5); }
+    catch(e){ q.textContent = 'Use o código abaixo'; }
+  }
+}
+function copiarPix(){
+  const t = document.getElementById('pix-codigo');
+  t.select();
+  (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => alert('Código Pix copiado!')).catch(() => { document.execCommand('copy'); alert('Código Pix copiado!'); });
+}
+
 let carrinho = [];
 const esc = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const val = id => document.getElementById(id).value.trim();
@@ -628,6 +682,7 @@ function atualizarResumo(){
   const total = copos.reduce((t, c) => t + precoCopo(c), 0);
   document.getElementById('total').textContent = reais(total);
   document.getElementById('total-barra').textContent = reais(total);
+  atualizarPix(total);
   document.getElementById('btn-add').disabled = !copoAtual();
   if(!copos.length){
     resumo.innerHTML = '<p style="font-style:italic">Escolha o sabor e o tamanho para começar...</p>';
@@ -669,6 +724,7 @@ function enviarWhatsApp(){
   L.push('◆ Recebimento: ' + B(formaRecebimento));
   if(d.entrega) L.push('◆ Endereço: ' + B(d.end));
   L.push('◆ Forma de Pagamento: ' + B(formaPagamento));
+  if(PIX_CHAVE && formaPagamento === 'Pix') L.push('◆ Pix de ' + B(reais(total)) + ': vou enviar o comprovante em seguida');
   if(d.troco) L.push('◆ Troco para: ' + B('R$ ' + d.troco));
   if(d.obs) L.push('◆ Observações: ' + B(d.obs));
   L.push('◆ Total: ' + B(reais(total)), 'Olá! Gostaria de confirmar meu pedido! ◆');
