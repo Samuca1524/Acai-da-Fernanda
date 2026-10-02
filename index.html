@@ -68,6 +68,9 @@ tailwind.config = {
   .copo-box .rm { float: right; background: #EF4444; color: #fff; border: none; border-radius: 8px; padding: 2px 10px; cursor: pointer; font-weight: 700; }
   #barra-total { position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: #2D0C5E; border-top: 3px solid #FACC15; padding: 10px 16px calc(10px + env(safe-area-inset-bottom,0px)); display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
   #barra-total button { background: #FACC15; color: #2D0C5E; border: none; border-radius: 999px; padding: 10px 18px; font-weight: 700; cursor: pointer; }
+  .sub { margin-top: 20px; padding-top: 18px; border-top: 1px solid #5A189A; }
+  .card > div.sub:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+  .sub-titulo { font-size: 19px !important; margin: 0 0 10px !important; }
   .abas-tamanho { display: flex; gap: 8px; margin-bottom: 12px; }
   .aba { flex: 1; padding: 10px 12px; border-radius: 999px; border: 2px solid #5A189A; background: #4A1599; color: #FACC15; font-weight: 700; font-size: 15px; cursor: pointer; transition: all .2s; }
   .aba:hover { border-color: #FACC15; }
@@ -120,9 +123,11 @@ tailwind.config = {
 
 <main style="max-width:760px;margin:0 auto;padding:20px">
 
-  <!-- PASSO 1: SABORES (multipla escolha) -->
   <div class="card">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">1. Escolha o Sabor (pode escolher mais de um)</h2>
+    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">Etapa 1 de 3 — Monte seu copo</h2>
+    <button id="btn-repetir" type="button" class="btn-add" style="display:none;margin:0 0 6px" onclick="repetirUltimo()">🔁 Repetir meu último pedido</button>
+    <div class="sub">
+    <h3 class="titulo sub-titulo">Escolha o Sabor (pode escolher mais de um)</h3>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="lista-sabores">
       <label class="opcao" style="flex-direction:column;text-align:center" data-tipo="sabor" data-nome="Açaí">
         <input type="checkbox" name="sabor" value="Açaí" onchange="atualizarSabor()">
@@ -138,10 +143,8 @@ tailwind.config = {
       </label>
     </div>
   </div>
-
-  <!-- PASSO 2: TAMANHO -->
-  <div class="card">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">2. Escolha o Tamanho</h2>
+    <div class="sub">
+    <h3 class="titulo sub-titulo">Escolha o Tamanho</h3>
     <p id="aviso-tamanho" style="font-size:13px;color:#FACC15;margin:0 0 12px">Escolha o sabor primeiro</p>
     <div class="abas-tamanho">
       <button type="button" class="aba ativa" id="aba-tradicional" onclick="trocarAba('tradicional')">Tradicional</button>
@@ -214,10 +217,12 @@ tailwind.config = {
       </div>
     </div>
   </div>
+  </div>
 
-  <!-- PASSO 3: FRUTAS -->
   <div class="card">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">3. Frutas e Acompanhamentos</h2>
+    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">Etapa 2 de 3 — Frutas, acompanhamentos e coberturas</h2>
+    <div class="sub">
+    <h3 class="titulo sub-titulo">Frutas e Acompanhamentos</h3>
     <div class="abas-tamanho"><button type="button" class="aba ativa" id="aba-fr" onclick="trocarAbaFA('fr')">🍓 Frutas</button><button type="button" class="aba" id="aba-ac" onclick="trocarAbaFA('ac')">🥜 Acompanhamentos</button></div>
     <div id="sec-fr">
     <p id="aviso-frutas" style="font-size:13px;color:#FACC15;margin:0 0 12px">Escolha o tamanho primeiro</p>
@@ -244,10 +249,8 @@ tailwind.config = {
     </div>
     </div>
   </div>
-
-  <!-- PASSO 5: COBERTURAS + ADICIONAL -->
-  <div class="card">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">4. Coberturas e Extras</h2>
+    <div class="sub">
+    <h3 class="titulo sub-titulo">Coberturas e Extras</h3>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px">
       <label class="opcao" data-tipo="cobert" data-nome="Cobertura de Chocolate"><input type="checkbox" class="chk-cobert" value="Cobertura de Chocolate" onchange="atualizarResumo()"><span>🍫 Chocolate</span></label>
       <label class="opcao" data-tipo="cobert" data-nome="Cobertura de Morango"><input type="checkbox" class="chk-cobert" value="Cobertura de Morango" onchange="atualizarResumo()"><span>🍓 Morango</span></label>
@@ -260,12 +263,14 @@ tailwind.config = {
       <span class="preco" style="margin-left:auto">+ R$ 2,00</span>
     </label>
   </div>
+  </div>
 
   <button type="button" class="btn-add" id="btn-add" onclick="novoCopo()" disabled>➕ Adicionar outro copo ao pedido</button>
 
-  <!-- PASSO 6: ENTREGA OU RETIRADA -->
   <div class="card">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">5. Entrega ou Retirada</h2>
+    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">Etapa 3 de 3 — Finalizar pedido</h2>
+    <div class="sub">
+    <h3 class="titulo sub-titulo">Entrega ou Retirada</h3>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
       <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Entrega" onchange="atualizarResumo()"><span>🛵 Entrega</span></label>
       <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Retirada" onchange="atualizarResumo()"><span>🏪 Retirada</span></label>
@@ -273,18 +278,15 @@ tailwind.config = {
     <p id="aviso-so-retirada" style="display:none;text-align:center;font-weight:700;margin:12px 0 0">🛵 Hoje só estamos com retirada.</p>
     <p id="tempo-estimado" style="font-size:14px;margin:14px 0 0;text-align:center"></p>
   </div>
-
-  <div class="card" id="bloco-endereco" style="display:none">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 12px">Endereço de Entrega</h2>
+    <div class="sub" id="bloco-endereco" style="display:none">
+    <h3 class="titulo sub-titulo">Endereço de Entrega</h3>
     <input class="campo-nome" id="end-rua" placeholder="Rua / Avenida" oninput="atualizarResumo()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-num" placeholder="Número" oninput="atualizarResumo()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-bairro" placeholder="Bairro" oninput="atualizarResumo()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-comp" placeholder="Complemento / referência (opcional)" oninput="atualizarResumo()">
   </div>
-
-  <!-- PASSO 7: PAGAMENTO -->
-  <div class="card">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 14px">6. Forma de Pagamento</h2>
+    <div class="sub">
+    <h3 class="titulo sub-titulo">Forma de Pagamento</h3>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
       <label class="opcao"><input type="radio" name="pagamento" value="Dinheiro" onchange="atualizarResumo()"><span>💵 Dinheiro</span></label>
       <label class="opcao"><input type="radio" name="pagamento" value="Pix" onchange="atualizarResumo()"><span>📱 Pix</span></label>
@@ -292,24 +294,21 @@ tailwind.config = {
       <label class="opcao"><input type="radio" name="pagamento" value="Cartão de Débito" onchange="atualizarResumo()"><span>🏧 Débito</span></label>
     </div>
   </div>
-
-  <div class="card" id="bloco-troco" style="display:none">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">Troco</h2>
+    <div class="sub" id="bloco-troco" style="display:none">
+    <h3 class="titulo sub-titulo">Troco</h3>
     <p style="font-size:13px;margin:0 0 12px">Troco para quanto? (deixe vazio se não precisar)</p>
     <input class="campo-nome" id="troco" inputmode="decimal" placeholder="Ex.: 50" oninput="atualizarResumo()">
   </div>
-
-  <div class="card">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">Observações</h2>
+    <div class="sub">
+    <h3 class="titulo sub-titulo">Observações</h3>
     <p style="font-size:13px;margin:0 0 12px">Opcional: ex.: sem granola, sem canudo...</p>
     <textarea class="campo-nome" id="obs" rows="3" maxlength="200" placeholder="Escreva aqui" oninput="atualizarResumo()"></textarea>
   </div>
-
-  <!-- PASSO 8: NOME -->
-  <div class="card">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">7. Seu Nome</h2>
+    <div class="sub">
+    <h3 class="titulo sub-titulo">Seu Nome</h3>
     <p style="font-size:13px;margin:0 0 12px">Para identificarmos o seu pedido</p>
     <input type="text" id="nome-cliente" maxlength="40" placeholder="Digite seu nome" autocomplete="name" oninput="atualizarResumo()" class="campo-nome">
+  </div>
   </div>
 
   <!-- RESUMO -->
@@ -557,6 +556,7 @@ function montarBotoesControle(){
   html += `<p style="font-weight:700;color:#FACC15;margin:14px 0 4px;font-size:13px">Preço de cada extra (R$)</p><div style="display:flex;gap:6px;flex-wrap:wrap"><label style="font-size:11px">Fruta extra<br><input id="ex-f" type="number" step="0.5" min="0" value="${pex.f}" style="width:80px;padding:6px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700"></label><label style="font-size:11px">Acomp. extra<br><input id="ex-a" type="number" step="0.5" min="0" value="${pex.a}" style="width:80px;padding:6px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700"></label></div><button class="btn-ctrl ok" style="width:100%;padding:12px;margin-top:10px" onclick="salvarExtras()">💾 Salvar extras</button>`;
   html = `<p id=\"pedidos-hoje\" style=\"font-weight:700;color:#2D0C5E;background:#FACC15;border-radius:10px;padding:8px 12px;margin:0 0 8px;font-size:15px\">Pedidos de hoje: ...</p>` + html;
   container.innerHTML = html;
+  try{ localStorage.setItem('ultimo_pedido_acai', JSON.stringify(copos)); }catch(e){}
   atualizarPedidosHoje();
 }
 
@@ -768,6 +768,23 @@ function aplicarSoRetirada(){
   document.getElementById('aviso-so-retirada').style.display = so ? 'block' : 'none';
 }
 
+// ===== REPETIR ÚLTIMO PEDIDO =====
+function mostrarBtnRepetir(){ try{ if(JSON.parse(localStorage.getItem('ultimo_pedido_acai') || '[]').length) document.getElementById('btn-repetir').style.display = 'block'; }catch(e){} }
+function repetirUltimo(){
+  let lista = []; try{ lista = JSON.parse(localStorage.getItem('ultimo_pedido_acai') || '[]'); }catch(e){}
+  if(!lista.length) return;
+  const c = lista[lista.length - 1]; carrinho = lista.slice(0, -1);
+  document.querySelectorAll('input[name="sabor"]').forEach(i => { i.checked = c.sabores.includes(i.value) && !i.disabled; i.closest('.opcao').classList.toggle('selecionado', i.checked); });
+  atualizarSabor();
+  trocarAba(c.tam.includes('Nutella') ? 'nutella' : 'tradicional');
+  memFrutas = c.frutas.slice(); memAcomp = c.acomp.slice();
+  const r = Array.from(document.querySelectorAll('input[name="tamanho"]')).find(x => x.value === c.tam && !x.disabled);
+  if(r){ r.checked = true; document.querySelectorAll('input[name="tamanho"]').forEach(x => x.closest('.opcao').classList.toggle('selecionado', x.checked)); atualizarTamanho(r); }
+  document.querySelectorAll('.chk-cobert').forEach(x => { x.checked = c.cobert.includes(x.value) && !x.disabled; x.closest('.opcao').classList.toggle('selecionado', x.checked); });
+  const ad = document.getElementById('adicional-leite'); const leite = document.querySelector('.chk-cobert[value*="Leite"]'); ad.checked = !!c.adicional && !!leite && leite.checked; ad.closest('.opcao').classList.toggle('selecionado', ad.checked);
+  atualizarResumo();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 let carrinho = [];
 const esc = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const val = id => document.getElementById(id).value.trim();
@@ -890,6 +907,7 @@ document.addEventListener('click', function(e){
 
 // ===== INICIALIZA =====
 carregarCliente();
+mostrarBtnRepetir();
 contarVisita();
 aplicarDisponibilidade();
 montarBotoesControle();
