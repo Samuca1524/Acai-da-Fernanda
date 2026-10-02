@@ -409,20 +409,36 @@ function minutosAgoraBR(){
   return Number(p.find(x => x.type === 'hour').value) * 60 + Number(p.find(x => x.type === 'minute').value);
 }
 function foraDoHorario(){ const m = minutosAgoraBR(); return m < HORA_ABRE * 60 || m >= HORA_FECHA * 60; }
-function lojaManual(){ const d = carregarDisponibilidade(); return !!(d.loja && d.loja.fechada); }
-function lojaFechada(){ return lojaManual() || foraDoHorario(); }
+// Ajuste manual: 'aberta' (abriu fora do horário) vale até o PRÓXIMO fechamento automático (22h);
+// 'fechada' (fechou dentro do horário) vale até a PRÓXIMA abertura automática (13h). Depois volta sozinho ao automático.
+function proximaHoraBR(h){ // próximo instante em que o relógio de Brasília marca h:00 (Brasília = UTC-3)
+  const br = new Date(Date.now() - 3 * 3600e3);
+  let alvo = Date.UTC(br.getUTCFullYear(), br.getUTCMonth(), br.getUTCDate(), h);
+  if(alvo <= br.getTime()) alvo += 24 * 3600e3;
+  return alvo + 3 * 3600e3;
+}
+function lojaModo(){ const d = carregarDisponibilidade(); return (d.loja && d.loja.ate > Date.now() && d.loja.modo) || 'auto'; }
+function lojaFechada(){ const m = lojaModo(); return m === 'fechada' ? true : m === 'aberta' ? false : foraDoHorario(); }
 function alternarLoja(){
-  const senha = prompt('Digite a senha para ' + (lojaManual() ? 'REABRIR' : 'FECHAR') + ' a loja:');
+  const abrir = lojaFechada();
+  const senha = prompt('Digite a senha para ' + (abrir ? 'ABRIR' : 'FECHAR') + ' a loja:');
   if(senha === null) return;
   if(senha !== PIN_PAINEL){ alert('Senha incorreta.'); return; }
+  const fora = foraDoHorario();
   const d = carregarDisponibilidade();
-  d.loja = { fechada: !lojaManual() };
+  d.loja = abrir ? (fora ? { modo: 'aberta', ate: proximaHoraBR(HORA_FECHA) } : { modo: 'auto', ate: 0 })
+                 : (fora ? { modo: 'auto', ate: 0 } : { modo: 'fechada', ate: proximaHoraBR(HORA_ABRE) });
   salvarDisponibilidade(d); aplicarDisponibilidade(); montarBotoesControle();
+}
+function textoAjusteManual(){
+  const d = carregarDisponibilidade();
+  if(lojaModo() === 'auto') return '';
+  return ' (ajuste manual até ' + new Date(d.loja.ate).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ')';
 }
 function aplicarLoja(){
   const f = lojaFechada(), av = document.getElementById('aviso-fechada');
   av.style.display = f ? 'block' : 'none';
-  av.textContent = lojaManual() ? '🔒 Estamos fechados no momento. Volte em breve!' : '⏰ Funcionamos das ' + HORA_ABRE + 'h às ' + HORA_FECHA + 'h. Volte no nosso horário!';
+  av.textContent = lojaModo() === 'fechada' ? '🔒 Estamos fechados no momento. Volte em breve!' : '⏰ Funcionamos das ' + HORA_ABRE + 'h às ' + HORA_FECHA + 'h. Volte no nosso horário!';
   if(f){
     const bt = document.getElementById('btn-enviar');
     bt.disabled = true; bt.className = 'btn-enviar travado'; bt.innerHTML = '🔒 Loja fechada no momento';
@@ -525,8 +541,8 @@ function montarBotoesControle(){
     {titulo:'Acompanhamentos', itens:[['acomp','Leite em Pó'],['acomp','Paçoca'],['acomp','Amendoim'],['acomp','Ovomaltine'],['acomp','Sucrilhos'],['acomp','Chocoboll'],['acomp','Granola'],['acomp','Granulado'],['acomp','Confete']]},
     {titulo:'Coberturas', itens:[['cobert','Cobertura de Chocolate'],['cobert','Cobertura de Morango'],['cobert','Cobertura de Leite Condensado']]}
   ];
-  const manual = lojaManual();
-  let html = `<button class="btn-ctrl ${manual?'off':'ok'}" style="width:100%;padding:14px;font-size:16px;margin:4px 0 4px" onclick="alternarLoja()">${manual?'🔓 REABRIR LOJA (fechada manualmente)':'🔒 FECHAR LOJA agora'}</button><p style="font-size:12px;margin:0 0 6px">Horário automático: abre às ${HORA_ABRE}h e fecha às ${HORA_FECHA}h. Agora: ${foraDoHorario()?'fora do horário':'dentro do horário'}.</p>`;
+  const fechadaAgora = lojaFechada(), modo = lojaModo();
+  let html = `<button class="btn-ctrl ${fechadaAgora?'off':'ok'}" style="width:100%;padding:14px;font-size:16px;margin:4px 0 4px" onclick="alternarLoja()">${fechadaAgora?'🔓 ABRIR LOJA agora':'🔒 FECHAR LOJA agora'}</button><p style="font-size:12px;margin:0 0 6px">Horário automático: abre às ${HORA_ABRE}h e fecha às ${HORA_FECHA}h. Agora: ${foraDoHorario()?'fora do horário':'dentro do horário'}. Loja ${fechadaAgora?'FECHADA':'ABERTA'}${textoAjusteManual()}.</p>`;
   grupos.forEach(g => {
     html += `<p style="font-weight:700;color:#FACC15;margin:10px 0 4px;font-size:13px">${g.titulo}</p><div style="display:flex;flex-wrap:wrap">`;
     g.itens.forEach(([tipo,nome]) => {
