@@ -421,9 +421,6 @@ function lojaModo(){ const d = carregarDisponibilidade(); return (d.loja && d.lo
 function lojaFechada(){ const m = lojaModo(); return m === 'fechada' ? true : m === 'aberta' ? false : foraDoHorario(); }
 function alternarLoja(){
   const abrir = lojaFechada();
-  const senha = prompt('Digite a senha para ' + (abrir ? 'ABRIR' : 'FECHAR') + ' a loja:');
-  if(senha === null) return;
-  if(senha !== PIN_PAINEL){ alert('Senha incorreta.'); return; }
   const fora = foraDoHorario();
   const d = carregarDisponibilidade();
   d.loja = abrir ? (fora ? { modo: 'aberta', ate: proximaHoraBR(HORA_FECHA) } : { modo: 'auto', ate: 0 })
@@ -461,9 +458,6 @@ function aplicarPrecos(){
   });
 }
 function salvarPrecos(){
-  const senha = prompt('Digite a senha para salvar os preços:');
-  if(senha === null) return;
-  if(senha !== PIN_PAINEL){ alert('Senha incorreta.'); return; }
   const le = k => NOMES_TAM.map((_, i) => parseFloat(String(document.getElementById('pr-' + k + i).value).replace(',', '.')));
   const t = le('t'), n = le('n');
   if([...t, ...n].some(v => isNaN(v) || v < 0)){ alert('Preencha todos os preços com números válidos.'); return; }
