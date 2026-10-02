@@ -374,28 +374,75 @@ async function sincronizarRemoto(){
   }catch(e){}
 }
 
-// ===== FECHAR / ABRIR LOJA (vale para todos os clientes, via Firebase) =====
-function lojaFechada(){ const d = carregarDisponibilidade(); return !!(d.loja && d.loja.fechada); }
+// ===== HORÁRIO AUTOMÁTICO (13:00 às 22:00, horário de Brasília) + FECHAR/ABRIR MANUAL =====
+const HORA_ABRE = 13, HORA_FECHA = 22;
+function minutosAgoraBR(){
+  const p = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+  return Number(p.find(x => x.type === 'hour').value) * 60 + Number(p.find(x => x.type === 'minute').value);
+}
+function foraDoHorario(){ const m = minutosAgoraBR(); return m < HORA_ABRE * 60 || m >= HORA_FECHA * 60; }
+function lojaManual(){ const d = carregarDisponibilidade(); return !!(d.loja && d.loja.fechada); }
+function lojaFechada(){ return lojaManual() || foraDoHorario(); }
 function alternarLoja(){
-  // pede a senha toda vez que for abrir ou fechar a loja
-  const senha = prompt('Digite a senha para ' + (lojaFechada() ? 'ABRIR' : 'FECHAR') + ' a loja:');
+  const senha = prompt('Digite a senha para ' + (lojaManual() ? 'REABRIR' : 'FECHAR') + ' a loja:');
   if(senha === null) return;
   if(senha !== PIN_PAINEL){ alert('Senha incorreta.'); return; }
   const d = carregarDisponibilidade();
-  d.loja = { fechada: !lojaFechada() };
-  salvarDisponibilidade(d);
-  aplicarDisponibilidade();
-  montarBotoesControle();
+  d.loja = { fechada: !lojaManual() };
+  salvarDisponibilidade(d); aplicarDisponibilidade(); montarBotoesControle();
 }
 function aplicarLoja(){
-  const f = lojaFechada();
-  document.getElementById('aviso-fechada').style.display = f ? 'block' : 'none';
+  const f = lojaFechada(), av = document.getElementById('aviso-fechada');
+  av.style.display = f ? 'block' : 'none';
+  av.textContent = lojaManual() ? '🔒 Estamos fechados no momento. Volte em breve!' : '⏰ Funcionamos das ' + HORA_ABRE + 'h às ' + HORA_FECHA + 'h. Volte no nosso horário!';
   if(f){
-    const b = document.getElementById('btn-enviar');
-    b.disabled = true; b.className = 'btn-enviar travado';
-    b.innerHTML = '🔒 Loja fechada no momento';
+    const bt = document.getElementById('btn-enviar');
+    bt.disabled = true; bt.className = 'btn-enviar travado'; bt.innerHTML = '🔒 Loja fechada no momento';
   }
 }
+setInterval(() => atualizarResumo(), 30000);
+
+// ===== PREÇOS EDITÁVEIS (valem para todos os clientes) =====
+const NOMES_TAM = ['200ml', '300ml', '500ml', '700ml', '1 Litro'];
+function aplicarPrecos(){
+  const d = carregarDisponibilidade(); if(!d.precos) return;
+  [['grade-tradicional', 't'], ['grade-nutella', 'n']].forEach(([id, k]) => {
+    const arr = d.precos[k]; if(!arr) return;
+    document.querySelectorAll('#' + id + ' .opcao').forEach((el, i) => {
+      if(arr[i] == null) return;
+      el.dataset.preco = arr[i];
+      el.querySelector('.preco').textContent = 'R$ ' + Number(arr[i]).toFixed(2).replace('.', ',');
+      if(el.querySelector('input').checked) precoBase = Number(arr[i]);
+    });
+  });
+}
+function salvarPrecos(){
+  const senha = prompt('Digite a senha para salvar os preços:');
+  if(senha === null) return;
+  if(senha !== PIN_PAINEL){ alert('Senha incorreta.'); return; }
+  const le = k => NOMES_TAM.map((_, i) => parseFloat(String(document.getElementById('pr-' + k + i).value).replace(',', '.')));
+  const t = le('t'), n = le('n');
+  if([...t, ...n].some(v => isNaN(v) || v < 0)){ alert('Preencha todos os preços com números válidos.'); return; }
+  const d = carregarDisponibilidade(); d.precos = { t, n };
+  salvarDisponibilidade(d); aplicarDisponibilidade(); montarBotoesControle();
+  alert('Preços salvos!');
+}
+
+// ===== LEMBRAR NOME E ENDEREÇO DO CLIENTE =====
+const CAMPOS_CLIENTE = ['nome-cliente', 'end-rua', 'end-num', 'end-bairro', 'end-comp'];
+let clienteCarregado = false;
+function carregarCliente(){
+  try{
+    const c = JSON.parse(localStorage.getItem('cliente_acai') || '{}');
+    CAMPOS_CLIENTE.forEach(id => { if(c[id]) document.getElementById(id).value = c[id]; });
+  }catch(e){}
+  clienteCarregado = true;
+}
+function salvarCliente(){
+  if(!clienteCarregado) return;
+  try{ const c = {}; CAMPOS_CLIENTE.forEach(id => c[id] = document.getElementById(id).value); localStorage.setItem('cliente_acai', JSON.stringify(c)); }catch(e){}
+}
+
 function estaIndisponivel(tipo, nome){
   const d = carregarDisponibilidade();
   return d[tipo] && d[tipo][nome] === false;
@@ -411,6 +458,7 @@ function alternarDisponibilidade(tipo, nome){
 }
 
 function aplicarDisponibilidade(){
+  aplicarPrecos();
   let saborRemovido = false;
   document.querySelectorAll('[data-tipo]').forEach(el => {
     const tipo = el.dataset.tipo, nome = el.dataset.nome;
@@ -449,8 +497,8 @@ function montarBotoesControle(){
     {titulo:'Acompanhamentos', itens:[['acomp','Leite em Pó'],['acomp','Paçoca'],['acomp','Amendoim'],['acomp','Ovomaltine'],['acomp','Sucrilhos'],['acomp','Chocoboll'],['acomp','Granola'],['acomp','Granulado'],['acomp','Confete']]},
     {titulo:'Coberturas', itens:[['cobert','Cobertura de Chocolate'],['cobert','Cobertura de Morango'],['cobert','Cobertura de Leite Condensado']]}
   ];
-  const fechada = lojaFechada();
-  let html = `<button class="btn-ctrl ${fechada?'off':'ok'}" style="width:100%;padding:14px;font-size:16px;margin:4px 0 8px" onclick="alternarLoja()">${fechada?'🔓 ABRIR LOJA (está fechada)':'🔒 FECHAR LOJA'}</button>`;
+  const manual = lojaManual();
+  let html = `<button class="btn-ctrl ${manual?'off':'ok'}" style="width:100%;padding:14px;font-size:16px;margin:4px 0 4px" onclick="alternarLoja()">${manual?'🔓 REABRIR LOJA (fechada manualmente)':'🔒 FECHAR LOJA agora'}</button><p style="font-size:12px;margin:0 0 6px">Horário automático: abre às ${HORA_ABRE}h e fecha às ${HORA_FECHA}h. Agora: ${foraDoHorario()?'fora do horário':'dentro do horário'}.</p>`;
   grupos.forEach(g => {
     html += `<p style="font-weight:700;color:#FACC15;margin:10px 0 4px;font-size:13px">${g.titulo}</p><div style="display:flex;flex-wrap:wrap">`;
     g.itens.forEach(([tipo,nome]) => {
@@ -459,6 +507,13 @@ function montarBotoesControle(){
     });
     html += '</div>';
   });
+  const pr = (k, titulo, grade) => {
+    const els = document.querySelectorAll('#' + grade + ' .opcao');
+    let h = `<p style="font-size:12px;margin:8px 0 4px">${titulo}</p><div style="display:flex;flex-wrap:wrap;gap:6px">`;
+    NOMES_TAM.forEach((nm, i) => { h += `<label style="font-size:11px">${nm}<br><input id="pr-${k}${i}" type="number" step="0.5" min="0" value="${els[i] ? els[i].dataset.preco : ''}" style="width:68px;padding:6px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700"></label>`; });
+    return h + '</div>';
+  };
+  html += `<p style="font-weight:700;color:#FACC15;margin:14px 0 0;font-size:13px">Preços (R$)</p>` + pr('t', 'Tradicional', 'grade-tradicional') + pr('n', 'Com Nutella', 'grade-nutella') + `<button class="btn-ctrl ok" style="width:100%;padding:12px;margin-top:10px" onclick="salvarPrecos()">💾 Salvar preços</button>`;
   container.innerHTML = html;
 }
 
@@ -700,6 +755,7 @@ function dadosPedido(){
   return { entrega, end, endOk, troco: formaPagamento === 'Dinheiro' ? val('troco') : '', obs: val('obs') };
 }
 function atualizarResumo(){
+  salvarCliente();
   atualizarVisualAdicional();
   const d = dadosPedido(), copos = todosCopos();
   const resumo = document.getElementById('resumo'), btn = document.getElementById('btn-enviar');
@@ -736,13 +792,35 @@ function atualizarResumo(){
   aplicarLoja();
 }
 
+// ===== NÚMERO DO PEDIDO: contagem do dia (1, 2, 3...) que reinicia à meia-noite (horário de Brasília) =====
+async function proximoPedido(){
+  const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+  try{
+    if(!FIREBASE_URL) throw 0;
+    const u = FIREBASE_URL + '/contador_pedidos/' + dia + '.json';
+    const r = await fetch(u, { method: 'PUT', body: JSON.stringify({ '.sv': { increment: 1 } }) });
+    if(!r.ok) throw 0;
+    let n = await r.json();
+    if(typeof n !== 'number') n = await (await fetch(u)).json();
+    if(typeof n === 'number') return n;
+  }catch(e){}
+  // plano B (se o Firebase não responder): contagem só neste aparelho
+  const k = 'pedido_local_' + dia, n = (Number(localStorage.getItem(k)) || 0) + 1;
+  try{ localStorage.setItem(k, n); }catch(e){}
+  return n;
+}
+
 // ===== WHATSAPP =====
-function enviarWhatsApp(){
+async function enviarWhatsApp(){
   atualizarResumo();
-  if(document.getElementById('btn-enviar').disabled) return;
+  const btnEnv = document.getElementById('btn-enviar');
+  if(btnEnv.disabled) return;
+  btnEnv.disabled = true; btnEnv.innerHTML = 'Enviando...';
+  const janela = window.open('', '_blank'); // abre antes para o navegador não bloquear
   const d = dadosPedido(), copos = todosCopos(), B = t => '*' + t + '*';
   const total = copos.reduce((t, c) => t + precoCopo(c), 0);
-  const L = ['◆ PEDIDO DE ' + B(nomeCliente)];
+  const numero = await proximoPedido();
+  const L = ['◆ PEDIDO ' + B('#' + numero) + ' DE ' + B(nomeCliente)];
   copos.forEach((c, i) => {
     if(copos.length > 1) L.push('◆ ' + B('COPO ' + (i + 1)));
     L.push(...linhasCopo(c, B));
@@ -754,7 +832,9 @@ function enviarWhatsApp(){
   if(d.troco) L.push('◆ Troco para: ' + B('R$ ' + d.troco));
   if(d.obs) L.push('◆ Observações: ' + B(d.obs));
   L.push('◆ Total: ' + B(reais(total)), 'Olá! Gostaria de confirmar meu pedido! ◆');
-  window.open('https://wa.me/5511979908372?text=' + encodeURIComponent(L.join('\n\n')), '_blank');
+  const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(L.join('\n\n'));
+  if(janela) janela.location.href = url; else location.href = url;
+  atualizarResumo();
 }
 
 // ===== FECHA PAINEL AO CLICAR FORA =====
@@ -769,6 +849,7 @@ document.addEventListener('click', function(e){
 });
 
 // ===== INICIALIZA =====
+carregarCliente();
 aplicarDisponibilidade();
 montarBotoesControle();
 sincronizarRemoto(); setInterval(sincronizarRemoto, 5000);
