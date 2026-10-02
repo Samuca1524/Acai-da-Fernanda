@@ -851,13 +851,14 @@ function linhasCopo(c, b){
 }
 function novoCopo(){
   const c = copoAtual(); if(!c) return;
+  rascunhoBloqueado = false;
   carrinho.push(c);
   document.querySelectorAll('input[name="sabor"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
   atualizarSabor(); trocarAba('tradicional');
   window.scrollTo({ top: 0, behavior: 'smooth' });
   atualizarResumo();
 }
-function removerCopo(i){ carrinho.splice(i, 1); atualizarResumo(); }
+function removerCopo(i){ rascunhoBloqueado = false; carrinho.splice(i, 1); atualizarResumo(); }
 function dadosPedido(){
   const rec = document.querySelector('input[name="recebimento"]:checked');
   const pag = document.querySelector('input[name="pagamento"]:checked');
@@ -871,6 +872,7 @@ function dadosPedido(){
 }
 function atualizarResumo(){
   salvarCliente();
+  salvarRascunho();
   atualizarVisualAdicional();
   const d = dadosPedido(), copos = todosCopos();
   const resumo = document.getElementById('resumo'), btn = document.getElementById('btn-enviar');
@@ -937,6 +939,7 @@ async function enviarWhatsApp(){
   if(d.obs) L.push('◆ Observações: ' + B(d.obs));
   L.push('◆ Total: ' + B(reais(total)), 'Olá! Gostaria de confirmar meu pedido! ◆');
   const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(L.join('\n\n'));
+  limparRascunho(); // pedido enviado: não restaurar este pedido de novo (volta a salvar assim que o cliente mexer em algo)
   if(janela) janela.location.href = url; else location.href = url;
   atualizarPedidosHoje();
   atualizarResumo();
@@ -953,11 +956,93 @@ document.addEventListener('click', function(e){
   if(!dentro && !naEngrenagem) painel.classList.remove('aberto');
 });
 
+
+// ===== RASCUNHO DO PEDIDO: salva ao sair da aba e restaura ao voltar =====
+const RASCUNHO_KEY = 'rascunho_acai', RASCUNHO_VALIDADE_H = 6; // rascunho mais velho que isso é descartado
+let rascunhoPronto = false, rascunhoBloqueado = false;
+function rascunhoAtual(){
+  const radio = n => { const r = document.querySelector('input[name="' + n + '"]:checked'); return r ? r.value : ''; };
+  return {
+    ts: Date.now(),
+    carrinho: carrinho,
+    sabores: marcados('input[name="sabor"]'),
+    aba: document.getElementById('aba-nutella').classList.contains('ativa') ? 'nutella' : 'tradicional',
+    tamanho: tamanhoEscolhido,
+    frutas: memFrutas.slice(), acomp: memAcomp.slice(),
+    cobert: marcados('.chk-cobert'),
+    adicional: document.getElementById('adicional-leite').checked,
+    recebimento: radio('recebimento'), pagamento: radio('pagamento'),
+    troco: document.getElementById('troco').value, obs: document.getElementById('obs').value,
+    pixOk: pixConfirmado ? pixAtual : '' // Pix confirmado só vale se o código (valor) for o mesmo ao voltar
+  };
+}
+function salvarRascunho(){
+  if(!rascunhoPronto || rascunhoBloqueado) return;
+  try{
+    const r = rascunhoAtual();
+    const vazio = !r.carrinho.length && !r.sabores.length && !r.recebimento && !r.pagamento && !r.troco && !r.obs;
+    if(vazio) localStorage.removeItem(RASCUNHO_KEY); else localStorage.setItem(RASCUNHO_KEY, JSON.stringify(r));
+  }catch(e){}
+}
+function limparRascunho(){ try{ localStorage.removeItem(RASCUNHO_KEY); }catch(e){} rascunhoBloqueado = true; }
+function restaurarRascunho(){
+  try{
+    const r = JSON.parse(localStorage.getItem(RASCUNHO_KEY) || 'null');
+    if(!r || !r.ts || Date.now() - r.ts > RASCUNHO_VALIDADE_H * 3600e3){ localStorage.removeItem(RASCUNHO_KEY); return; }
+    const lista = a => Array.isArray(a) ? a.map(String) : [];
+    const validos = sel => Array.from(document.querySelectorAll(sel)).filter(i => !i.closest('.opcao').classList.contains('indisponivel')).map(i => i.value);
+    const NS = validos('input[name="sabor"]'), NF = validos('.chk-fruta'), NA = validos('.chk-acomp'), NC = validos('.chk-cobert');
+    const filtra = (a, ok) => lista(a).filter(x => ok.includes(x));
+    const radioPor = (nome, v) => Array.from(document.querySelectorAll('input[name="' + nome + '"]')).find(i => i.value === v);
+    const marca = (i, on) => { i.checked = on; i.closest('.opcao').classList.toggle('selecionado', on); };
+
+    // copos já adicionados ao pedido (preço refeito com a tabela atual)
+    carrinho = (Array.isArray(r.carrinho) ? r.carrinho : []).map(c => {
+      const rt = c && radioPor('tamanho', String(c.tam)); if(!rt) return null;
+      const op = rt.closest('.opcao'), sabores = filtra(c.sabores, NS); if(!sabores.length) return null;
+      return { sabores, tam: rt.value, preco: parseFloat(op.dataset.preco), frutas: filtra(c.frutas, NF).slice(0, parseInt(op.dataset.frutas)),
+               acomp: filtra(c.acomp, NA).slice(0, parseInt(op.dataset.acomp)), cobert: filtra(c.cobert, NC), adicional: !!c.adicional };
+    }).filter(Boolean);
+
+    // copo que estava sendo montado
+    const sab = filtra(r.sabores, NS);
+    document.querySelectorAll('input[name="sabor"]').forEach(i => marca(i, sab.includes(i.value)));
+    atualizarSabor();
+    if(sab.length){
+      const rt = radioPor('tamanho', String(r.tamanho));
+      trocarAba((rt ? !!rt.closest('#grade-nutella') : r.aba === 'nutella') ? 'nutella' : 'tradicional');
+      if(rt){
+        memFrutas = filtra(r.frutas, NF); memAcomp = filtra(r.acomp, NA);
+        marca(rt, true); atualizarTamanho(rt);
+      }
+      const cob = filtra(r.cobert, NC);
+      document.querySelectorAll('.chk-cobert').forEach(i => marca(i, cob.includes(i.value)));
+      document.getElementById('adicional-leite').checked = !!r.adicional;
+      sincronizarLeite();
+    }
+
+    // entrega/retirada, pagamento, troco e observações (nome e endereço já são lembrados à parte)
+    ['recebimento', 'pagamento'].forEach(n => { const el = radioPor(n, String(r[n])); if(el) marca(el, true); });
+    if(typeof r.troco === 'string') document.getElementById('troco').value = r.troco.slice(0, 12);
+    if(typeof r.obs === 'string') document.getElementById('obs').value = r.obs.slice(0, 200);
+    atualizarResumo();
+    if(r.pixOk && r.pixOk === pixAtual){ pixConfirmado = true; visualConfirmaPix(); atualizarResumo(); } // voltou do app do banco com o Pix já pago
+  }catch(e){}
+  finally{ rascunhoPronto = true; } // roda mesmo quando não há rascunho (return antecipado)
+}
+// salva quando a pessoa sai da aba (troca de app, bloqueia a tela, fecha o navegador)
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') salvarRascunho(); });
+window.addEventListener('pagehide', salvarRascunho);
+document.addEventListener('freeze', salvarRascunho);
+// depois de enviar o pedido, só volta a salvar quando o cliente mexer em algo
+['change', 'input'].forEach(ev => document.addEventListener(ev, () => { rascunhoBloqueado = false; }, true));
+
 // ===== INICIALIZA =====
 montarSeletorBairro();
 carregarCliente();
 aplicarDisponibilidade();
 montarBotoesControle();
+restaurarRascunho();
 sincronizarRemoto(); setInterval(sincronizarRemoto, 5000);
 // outras abas do mesmo navegador atualizam na hora
 window.addEventListener('storage', e => { if(e.key === 'disp_acai'){ aplicarDisponibilidade(); montarBotoesControle(); } });
