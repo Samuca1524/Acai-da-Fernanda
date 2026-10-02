@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Açaí da Fernanda | Monte seu Pedido</title>
 <meta name="description" content="Monte seu açaí, cupuaçu ou mangaba e peça pelo WhatsApp. Entrega em domicílio!">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <meta name="color-scheme" content="only light">
 <meta name="darkreader-lock">
 <style>:root { color-scheme: only light; }</style>
@@ -263,7 +262,7 @@ tailwind.config = {
   <div class="card">
     <h2 class="titulo" style="font-size:22px;margin:0 0 14px">6. Entrega ou Retirada</h2>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-      <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Entrega" onchange="atualizarResumo()"><span>🛵 Entrega <small id="taxa-rotulo" style="font-size:12px;opacity:.85"></small></span></label>
+      <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Entrega" onchange="atualizarResumo()"><span>🛵 Entrega</span></label>
       <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Retirada" onchange="atualizarResumo()"><span>🏪 Retirada</span></label>
     </div>
   </div>
@@ -273,7 +272,6 @@ tailwind.config = {
     <input class="campo-nome" id="end-rua" placeholder="Rua / Avenida" oninput="atualizarResumo()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-num" placeholder="Número" oninput="atualizarResumo()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-bairro" placeholder="Bairro" oninput="atualizarResumo()" style="margin-bottom:10px">
-    <select class="campo-nome" id="end-bairro-sel" onchange="atualizarResumo()" style="margin-bottom:10px;display:none"></select>
     <input class="campo-nome" id="end-comp" placeholder="Complemento / referência (opcional)" oninput="atualizarResumo()">
   </div>
 
@@ -285,20 +283,6 @@ tailwind.config = {
       <label class="opcao"><input type="radio" name="pagamento" value="Pix" onchange="atualizarResumo()"><span>📱 Pix</span></label>
       <label class="opcao"><input type="radio" name="pagamento" value="Cartão de Crédito" onchange="atualizarResumo()"><span>💳 Crédito</span></label>
       <label class="opcao"><input type="radio" name="pagamento" value="Cartão de Débito" onchange="atualizarResumo()"><span>🏧 Débito</span></label>
-    </div>
-  </div>
-
-  <div class="card" id="bloco-pix" style="display:none;text-align:center">
-    <h2 class="titulo" style="font-size:22px;margin:0 0 6px">Pague com Pix</h2>
-    <p style="font-size:14px;margin:0 0 12px">Valor: <strong id="pix-valor"></strong> — pague e envie o comprovante no WhatsApp</p>
-    <div id="pix-qr" style="display:inline-block;background:#fff;padding:10px;border-radius:12px"></div>
-    <p style="font-size:13px;margin:12px 0 4px">Chave Pix: <strong id="pix-chave"></strong></p>
-    <textarea class="campo-nome" id="pix-codigo" rows="3" readonly style="font-size:12px;font-weight:400"></textarea>
-    <button type="button" class="btn-add" style="margin:10px 0 0" onclick="copiarPix()">📋 Copiar código Pix (copia e cola)</button>
-    <div style="border-top:1px solid #5A189A;margin-top:16px;padding-top:16px">
-      <p id="pix-pergunta" style="font-weight:700;font-size:17px;margin:0 0 10px">Você já enviou o Pix?</p>
-      <button type="button" id="btn-pix-ok" class="btn-add" style="margin:0" onclick="confirmarPix()">✅ Sim, já enviei o Pix</button>
-      <p style="font-size:12px;margin:8px 0 0;opacity:.85">O botão de enviar o pedido só libera depois da confirmação. Se o valor do pedido mudar, confirme de novo.</p>
     </div>
   </div>
 
@@ -473,7 +457,7 @@ function salvarPrecos(){
 }
 
 // ===== LEMBRAR NOME E ENDEREÇO DO CLIENTE =====
-const CAMPOS_CLIENTE = ['nome-cliente', 'end-rua', 'end-num', 'end-bairro', 'end-bairro-sel', 'end-comp'];
+const CAMPOS_CLIENTE = ['nome-cliente', 'end-rua', 'end-num', 'end-bairro', 'end-comp'];
 let clienteCarregado = false;
 function carregarCliente(){
   try{
@@ -503,7 +487,6 @@ function alternarDisponibilidade(tipo, nome){
 
 function aplicarDisponibilidade(){
   aplicarPrecos();
-  montarSeletorBairro();
   let saborRemovido = false;
   document.querySelectorAll('[data-tipo]').forEach(el => {
     const tipo = el.dataset.tipo, nome = el.dataset.nome;
@@ -544,12 +527,6 @@ function montarBotoesControle(){
   ];
   const fechadaAgora = lojaFechada(), modo = lojaModo();
   let html = `<button class="btn-ctrl ${fechadaAgora?'off':'ok'}" style="width:100%;padding:14px;font-size:16px;margin:4px 0 4px" onclick="alternarLoja()">${fechadaAgora?'🔓 ABRIR LOJA agora':'🔒 FECHAR LOJA agora'}</button><p style="font-size:12px;margin:0 0 6px">Horário automático: abre às ${HORA_ABRE}h e fecha às ${HORA_FECHA}h. Agora: ${foraDoHorario()?'fora do horário':'dentro do horário'}. Loja ${fechadaAgora?'FECHADA':'ABERTA'}${textoAjusteManual()}.</p>`;
-  const lb = listaBairros();
-  html += `<p style="font-weight:700;color:#FACC15;margin:14px 0 4px;font-size:13px">🛵 Taxa de entrega por bairro</p>`;
-  if(!lb.length) html += `<p style="font-size:11px;margin:0 0 4px">Nenhum bairro cadastrado.</p>`;
-  lb.forEach((b, i) => { html += `<div style="display:flex;align-items:center;gap:6px;margin:3px 0;font-size:13px"><span style="flex:1">${esc(b.n)}</span><b>${reais(b.t)}</b><button class="btn-ctrl off" style="margin:0;padding:3px 9px" onclick="removerBairro(${i})">✕</button></div>`; });
-  html += `<div style="display:flex;gap:6px;margin-top:8px"><input id="novo-bairro" placeholder="Bairro" maxlength="40" style="padding:8px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700;flex:1;min-width:0"><input id="novo-bairro-taxa" type="number" step="0.5" min="0" placeholder="R$" style="padding:8px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700;width:70px"><button class="btn-ctrl ok" style="margin:0;padding:8px 12px" onclick="adicionarBairro()">➕</button></div><p style="font-size:11px;margin:4px 0 0">Com bairros cadastrados, o cliente escolhe o bairro numa lista e a taxa é somada sozinha. Cadastrar o mesmo nome atualiza o valor.</p>`;
-  html += `<p style="font-size:12px;margin:12px 0 4px">Taxa padrão (só vale se não houver nenhum bairro cadastrado)</p><div style="display:flex;gap:8px;align-items:center"><input id="taxa-entrega" type="number" step="0.5" min="0" value="${Number(carregarDisponibilidade().taxa) || 0}" style="padding:8px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700;width:90px"><button class="btn-ctrl ok" style="padding:10px 14px;margin:0" onclick="salvarTaxa()">💾 Salvar taxa</button></div>`;
   grupos.forEach(g => {
     html += `<p style="font-weight:700;color:#FACC15;margin:10px 0 4px;font-size:13px">${g.titulo}</p><div style="display:flex;flex-wrap:wrap">`;
     g.itens.forEach(([tipo,nome]) => {
@@ -723,59 +700,6 @@ function atualizarLimites(el){
 }
 
 // ===== RESUMO + BOTAO =====
-// ===== PIX (copia e cola com valor) =====
-const PIX_CHAVE = '+5511979908372';
-const PIX_EXIBIR = '(11) 97990-8372'; // como aparece para o cliente            // <<< coloque aqui a chave Pix (CPF, CNPJ, e-mail, +55DDDNUMERO ou chave aleatória)
-const PIX_NOME = 'FERNANDA PUTI SANTOS'; // até 25 letras, sem acento
-const PIX_CIDADE = 'ITAQUAQUECETUBA';      // até 15 letras, sem acento
-function crc16(str){
-  let crc = 0xFFFF;
-  for(let i = 0; i < str.length; i++){
-    crc ^= str.charCodeAt(i) << 8;
-    for(let j = 0; j < 8; j++) crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
-  }
-  return crc.toString(16).toUpperCase().padStart(4, '0');
-}
-function brCodePix(valor){
-  const f = (id, v) => id + String(v.length).padStart(2, '0') + v;
-  const sem = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-  const conta = f('00', 'br.gov.bcb.pix') + f('01', PIX_CHAVE.trim());
-  const base = f('00', '01') + f('01', '11') + f('26', conta) + f('52', '0000') + f('53', '986') +
-    f('54', valor.toFixed(2)) + f('58', 'BR') + f('59', sem(PIX_NOME).slice(0, 25)) + f('60', sem(PIX_CIDADE).slice(0, 15)) +
-    f('62', f('05', '***')) + '6304';
-  return base + crc16(base);
-}
-let pixAtual = '', pixConfirmado = false;
-function visualConfirmaPix(){
-  const b = document.getElementById('btn-pix-ok'), q = document.getElementById('pix-pergunta');
-  if(!b || !q) return;
-  q.textContent = pixConfirmado ? 'Pix confirmado! Agora é só enviar o pedido.' : 'Você já enviou o Pix?';
-  b.textContent = pixConfirmado ? '✔ Pix confirmado (toque para desfazer)' : '✅ Sim, já enviei o Pix';
-  b.style.background = pixConfirmado ? '#22C55E' : ''; b.style.color = pixConfirmado ? '#fff' : ''; b.style.borderColor = pixConfirmado ? '#22C55E' : '';
-}
-function confirmarPix(){ pixConfirmado = !pixConfirmado; visualConfirmaPix(); atualizarResumo(); }
-function atualizarPix(total){
-  const box = document.getElementById('bloco-pix');
-  if(!PIX_CHAVE || formaPagamento !== 'Pix' || total <= 0){ box.style.display = 'none'; pixAtual = ''; pixConfirmado = false; visualConfirmaPix(); return; }
-  const codigo = brCodePix(total);
-  if(codigo !== pixAtual){ pixConfirmado = false; visualConfirmaPix(); } // valor mudou (copo, bairro...): precisa confirmar de novo
-  box.style.display = 'block';
-  document.getElementById('pix-valor').textContent = reais(total);
-  document.getElementById('pix-chave').textContent = PIX_EXIBIR;
-  document.getElementById('pix-codigo').value = codigo;
-  if(codigo !== pixAtual){
-    pixAtual = codigo;
-    const q = document.getElementById('pix-qr');
-    try{ const qr = qrcode(0, 'M'); qr.addData(codigo); qr.make(); q.innerHTML = qr.createImgTag(5); }
-    catch(e){ q.textContent = 'Use o código abaixo'; }
-  }
-}
-function copiarPix(){
-  const t = document.getElementById('pix-codigo');
-  t.select();
-  (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => alert('Código Pix copiado!')).catch(() => { document.execCommand('copy'); alert('Código Pix copiado!'); });
-}
-
 let carrinho = [];
 const esc = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const val = id => document.getElementById(id).value.trim();
@@ -786,59 +710,6 @@ function copoAtual(){
   return { sabores, tam: tamanhoEscolhido, preco: precoBase, frutas: marcados('.chk-fruta'), acomp: marcados('.chk-acomp'), cobert: marcados('.chk-cobert'), adicional: document.getElementById('adicional-leite').checked };
 }
 const precoCopo = c => c.preco + (c.adicional ? 2 : 0);
-// ===== TAXA DE ENTREGA POR BAIRRO (cadastrada no painel da engrenagem; cobrada automaticamente na Entrega) =====
-function listaBairros(){
-  const b = carregarDisponibilidade().bairros;
-  const arr = Array.isArray(b) ? b : (b ? Object.values(b) : []);
-  return arr.filter(x => x && x.n).map(x => ({ n: String(x.n), t: Number(x.t) || 0 }));
-}
-function bairroValor(){ return listaBairros().length ? document.getElementById('end-bairro-sel').value : val('end-bairro'); }
-function taxaEntrega(){
-  const lista = listaBairros();
-  if(lista.length){ const b = lista.find(x => x.n === bairroValor()); return b ? b.t : 0; }
-  const t = Number(carregarDisponibilidade().taxa); return t > 0 ? t : 0; // sem bairros cadastrados: usa a taxa padrão
-}
-function montarSeletorBairro(){
-  const sel = document.getElementById('end-bairro-sel'), inp = document.getElementById('end-bairro'), lista = listaBairros();
-  if(!lista.length){ sel.style.display = 'none'; inp.style.display = ''; return; }
-  let atual = sel.value;
-  if(!atual){ try{ atual = JSON.parse(localStorage.getItem('cliente_acai') || '{}')['end-bairro-sel'] || ''; }catch(e){} }
-  sel.innerHTML = '';
-  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Selecione o bairro'; sel.appendChild(o0);
-  lista.forEach(b => { const o = document.createElement('option'); o.value = b.n; o.textContent = b.n + ' — ' + (b.t > 0 ? reais(b.t) : 'Grátis'); sel.appendChild(o); });
-  sel.value = atual; if(sel.value !== atual) sel.value = '';
-  inp.style.display = 'none'; sel.style.display = '';
-}
-function adicionarBairro(){
-  const nome = document.getElementById('novo-bairro').value.trim();
-  const taxa = parseFloat(String(document.getElementById('novo-bairro-taxa').value).replace(',', '.'));
-  if(!nome || isNaN(taxa) || taxa < 0){ alert('Digite o nome do bairro e um valor válido para a taxa (use 0 para grátis).'); return; }
-  const lista = listaBairros(), ex = lista.find(x => x.n.toLowerCase() === nome.toLowerCase());
-  if(ex) ex.t = taxa; else lista.push({ n: nome, t: taxa });
-  lista.sort((a, b) => a.n.localeCompare(b.n, 'pt-BR'));
-  const d = carregarDisponibilidade(); d.bairros = lista;
-  salvarDisponibilidade(d); aplicarDisponibilidade(); montarBotoesControle();
-}
-function removerBairro(i){
-  const lista = listaBairros(); lista.splice(i, 1);
-  const d = carregarDisponibilidade();
-  if(lista.length) d.bairros = lista; else delete d.bairros;
-  salvarDisponibilidade(d);
-  if(!lista.length && FIREBASE_URL) fetch(FIREBASE_URL + '/disp_acai/bairros.json', { method: 'DELETE' }).catch(() => {});
-  aplicarDisponibilidade(); montarBotoesControle();
-}
-function totais(copos, entrega){
-  const sub = copos.reduce((t, c) => t + precoCopo(c), 0);
-  const taxa = (entrega && sub > 0) ? taxaEntrega() : 0;
-  return { sub, taxa, total: sub + taxa };
-}
-function salvarTaxa(){
-  const v = parseFloat(String(document.getElementById('taxa-entrega').value).replace(',', '.'));
-  if(isNaN(v) || v < 0){ alert('Digite um valor válido para a taxa de entrega.'); return; }
-  const d = carregarDisponibilidade(); d.taxa = v;
-  salvarDisponibilidade(d); atualizarResumo(); montarBotoesControle();
-  alert('Taxa de entrega salva!');
-}
 const reais = n => 'R$ ' + n.toFixed(2).replace('.', ',');
 function todosCopos(){ const c = copoAtual(); return c ? carrinho.concat([c]) : carrinho.slice(); }
 function linhasCopo(c, b){
@@ -851,14 +722,13 @@ function linhasCopo(c, b){
 }
 function novoCopo(){
   const c = copoAtual(); if(!c) return;
-  rascunhoBloqueado = false;
   carrinho.push(c);
   document.querySelectorAll('input[name="sabor"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
   atualizarSabor(); trocarAba('tradicional');
   window.scrollTo({ top: 0, behavior: 'smooth' });
   atualizarResumo();
 }
-function removerCopo(i){ rascunhoBloqueado = false; carrinho.splice(i, 1); atualizarResumo(); }
+function removerCopo(i){ carrinho.splice(i, 1); atualizarResumo(); }
 function dadosPedido(){
   const rec = document.querySelector('input[name="recebimento"]:checked');
   const pag = document.querySelector('input[name="pagamento"]:checked');
@@ -866,21 +736,18 @@ function dadosPedido(){
   const entrega = formaRecebimento === 'Entrega';
   document.getElementById('bloco-endereco').style.display = entrega ? 'block' : 'none';
   document.getElementById('bloco-troco').style.display = formaPagamento === 'Dinheiro' ? 'block' : 'none';
-  const end = entrega ? val('end-rua') + ', ' + val('end-num') + ' - ' + bairroValor() + (val('end-comp') ? ' (' + val('end-comp') + ')' : '') : '';
-  const endOk = !entrega || (val('end-rua') && val('end-num') && bairroValor());
+  const end = entrega ? val('end-rua') + ', ' + val('end-num') + ' - ' + val('end-bairro') + (val('end-comp') ? ' (' + val('end-comp') + ')' : '') : '';
+  const endOk = !entrega || (val('end-rua') && val('end-num') && val('end-bairro'));
   return { entrega, end, endOk, troco: formaPagamento === 'Dinheiro' ? val('troco') : '', obs: val('obs') };
 }
 function atualizarResumo(){
   salvarCliente();
-  salvarRascunho();
   atualizarVisualAdicional();
   const d = dadosPedido(), copos = todosCopos();
   const resumo = document.getElementById('resumo'), btn = document.getElementById('btn-enviar');
-  const { taxa, total } = totais(copos, d.entrega);
-  const rot = document.getElementById('taxa-rotulo'); if(rot) rot.textContent = (!listaBairros().length && taxaEntrega() > 0) ? '(+ ' + reais(taxaEntrega()) + ')' : (listaBairros().length ? '(taxa por bairro)' : '');
+  const total = copos.reduce((t, c) => t + precoCopo(c), 0);
   document.getElementById('total').textContent = reais(total);
   document.getElementById('total-barra').textContent = reais(total);
-  atualizarPix(total);
   document.getElementById('btn-add').disabled = !copoAtual();
   if(!copos.length){
     resumo.innerHTML = '<p style="font-style:italic">Escolha o sabor e o tamanho para começar...</p>';
@@ -899,17 +766,12 @@ function atualizarResumo(){
   });
   h += '<p>◆ Recebimento: ' + (formaRecebimento ? B(formaRecebimento) : 'Ainda não escolhido') + '</p>';
   if(d.entrega) h += '<p>◆ Endereço: ' + (d.endOk ? B(d.end) : 'Preencha o endereço') + '</p>';
-  if(d.entrega){
-    const temLista = listaBairros().length;
-    if(taxa > 0) h += '<p>◆ Taxa de entrega: ' + B(reais(taxa)) + '</p>';
-    else if(temLista) h += '<p>◆ Taxa de entrega: ' + (bairroValor() ? B('Grátis') : 'Escolha o bairro') + '</p>';
-  }
   h += '<p>◆ Forma de Pagamento: ' + (formaPagamento ? B(formaPagamento) : 'Ainda não escolhida') + '</p>';
   if(d.troco) h += '<p>◆ Troco para: ' + B('R$ ' + d.troco) + '</p>';
   if(d.obs) h += '<p>◆ Observações: ' + B(d.obs) + '</p>';
   h += '<p>◆ Nome: ' + (nomeCliente ? B(nomeCliente) : 'Ainda não informado') + '</p>';
   resumo.innerHTML = h;
-  const falta = !formaRecebimento ? 'Escolha entrega ou retirada' : !d.endOk ? 'Preencha o endereço' : !formaPagamento ? 'Escolha a forma de pagamento' : !nomeCliente ? 'Digite seu nome' : (PIX_CHAVE && formaPagamento === 'Pix' && !pixConfirmado) ? 'Pague o Pix e confirme acima' : '';
+  const falta = !formaRecebimento ? 'Escolha entrega ou retirada' : !d.endOk ? 'Preencha o endereço' : !formaPagamento ? 'Escolha a forma de pagamento' : !nomeCliente ? 'Digite seu nome' : '';
   btn.disabled = !!falta; btn.className = 'btn-enviar ' + (falta ? 'travado' : 'liberado');
   btn.innerHTML = '<i class="fa fa-whatsapp"></i> ' + (falta || 'Enviar Pedido no WhatsApp');
   aplicarLoja();
@@ -923,7 +785,7 @@ async function enviarWhatsApp(){
   btnEnv.disabled = true; btnEnv.innerHTML = 'Enviando...';
   const janela = window.open('', '_blank'); // abre antes para o navegador não bloquear
   const d = dadosPedido(), copos = todosCopos(), B = t => '*' + t + '*';
-  const { taxa, total } = totais(copos, d.entrega);
+  const total = copos.reduce((t, c) => t + precoCopo(c), 0);
   const numero = await proximoNumeroPedido();
   const L = ['◆ PEDIDO ' + B('#' + numero) + ' DE ' + B(nomeCliente)];
   copos.forEach((c, i) => {
@@ -932,14 +794,11 @@ async function enviarWhatsApp(){
   });
   L.push('◆ Recebimento: ' + B(formaRecebimento));
   if(d.entrega) L.push('◆ Endereço: ' + B(d.end));
-  if(d.entrega && taxa > 0) L.push('◆ Taxa de entrega: ' + B(reais(taxa)));
   L.push('◆ Forma de Pagamento: ' + B(formaPagamento));
-  if(PIX_CHAVE && formaPagamento === 'Pix') L.push('◆ Pix de ' + B(reais(total)) + ': já enviei, vou mandar o comprovante em seguida');
   if(d.troco) L.push('◆ Troco para: ' + B('R$ ' + d.troco));
   if(d.obs) L.push('◆ Observações: ' + B(d.obs));
   L.push('◆ Total: ' + B(reais(total)), 'Olá! Gostaria de confirmar meu pedido! ◆');
   const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(L.join('\n\n'));
-  limparRascunho(); // pedido enviado: não restaurar este pedido de novo (volta a salvar assim que o cliente mexer em algo)
   if(janela) janela.location.href = url; else location.href = url;
   atualizarPedidosHoje();
   atualizarResumo();
@@ -956,93 +815,10 @@ document.addEventListener('click', function(e){
   if(!dentro && !naEngrenagem) painel.classList.remove('aberto');
 });
 
-
-// ===== RASCUNHO DO PEDIDO: salva ao sair da aba e restaura ao voltar =====
-const RASCUNHO_KEY = 'rascunho_acai', RASCUNHO_VALIDADE_H = 6; // rascunho mais velho que isso é descartado
-let rascunhoPronto = false, rascunhoBloqueado = false;
-function rascunhoAtual(){
-  const radio = n => { const r = document.querySelector('input[name="' + n + '"]:checked'); return r ? r.value : ''; };
-  return {
-    ts: Date.now(),
-    carrinho: carrinho,
-    sabores: marcados('input[name="sabor"]'),
-    aba: document.getElementById('aba-nutella').classList.contains('ativa') ? 'nutella' : 'tradicional',
-    tamanho: tamanhoEscolhido,
-    frutas: memFrutas.slice(), acomp: memAcomp.slice(),
-    cobert: marcados('.chk-cobert'),
-    adicional: document.getElementById('adicional-leite').checked,
-    recebimento: radio('recebimento'), pagamento: radio('pagamento'),
-    troco: document.getElementById('troco').value, obs: document.getElementById('obs').value,
-    pixOk: pixConfirmado ? pixAtual : '' // Pix confirmado só vale se o código (valor) for o mesmo ao voltar
-  };
-}
-function salvarRascunho(){
-  if(!rascunhoPronto || rascunhoBloqueado) return;
-  try{
-    const r = rascunhoAtual();
-    const vazio = !r.carrinho.length && !r.sabores.length && !r.recebimento && !r.pagamento && !r.troco && !r.obs;
-    if(vazio) localStorage.removeItem(RASCUNHO_KEY); else localStorage.setItem(RASCUNHO_KEY, JSON.stringify(r));
-  }catch(e){}
-}
-function limparRascunho(){ try{ localStorage.removeItem(RASCUNHO_KEY); }catch(e){} rascunhoBloqueado = true; }
-function restaurarRascunho(){
-  try{
-    const r = JSON.parse(localStorage.getItem(RASCUNHO_KEY) || 'null');
-    if(!r || !r.ts || Date.now() - r.ts > RASCUNHO_VALIDADE_H * 3600e3){ localStorage.removeItem(RASCUNHO_KEY); return; }
-    const lista = a => Array.isArray(a) ? a.map(String) : [];
-    const validos = sel => Array.from(document.querySelectorAll(sel)).filter(i => !i.closest('.opcao').classList.contains('indisponivel')).map(i => i.value);
-    const NS = validos('input[name="sabor"]'), NF = validos('.chk-fruta'), NA = validos('.chk-acomp'), NC = validos('.chk-cobert');
-    const filtra = (a, ok) => lista(a).filter(x => ok.includes(x));
-    const radioPor = (nome, v) => Array.from(document.querySelectorAll('input[name="' + nome + '"]')).find(i => i.value === v);
-    const marca = (i, on) => { i.checked = on; i.closest('.opcao').classList.toggle('selecionado', on); };
-
-    // copos já adicionados ao pedido (preço refeito com a tabela atual)
-    carrinho = (Array.isArray(r.carrinho) ? r.carrinho : []).map(c => {
-      const rt = c && radioPor('tamanho', String(c.tam)); if(!rt) return null;
-      const op = rt.closest('.opcao'), sabores = filtra(c.sabores, NS); if(!sabores.length) return null;
-      return { sabores, tam: rt.value, preco: parseFloat(op.dataset.preco), frutas: filtra(c.frutas, NF).slice(0, parseInt(op.dataset.frutas)),
-               acomp: filtra(c.acomp, NA).slice(0, parseInt(op.dataset.acomp)), cobert: filtra(c.cobert, NC), adicional: !!c.adicional };
-    }).filter(Boolean);
-
-    // copo que estava sendo montado
-    const sab = filtra(r.sabores, NS);
-    document.querySelectorAll('input[name="sabor"]').forEach(i => marca(i, sab.includes(i.value)));
-    atualizarSabor();
-    if(sab.length){
-      const rt = radioPor('tamanho', String(r.tamanho));
-      trocarAba((rt ? !!rt.closest('#grade-nutella') : r.aba === 'nutella') ? 'nutella' : 'tradicional');
-      if(rt){
-        memFrutas = filtra(r.frutas, NF); memAcomp = filtra(r.acomp, NA);
-        marca(rt, true); atualizarTamanho(rt);
-      }
-      const cob = filtra(r.cobert, NC);
-      document.querySelectorAll('.chk-cobert').forEach(i => marca(i, cob.includes(i.value)));
-      document.getElementById('adicional-leite').checked = !!r.adicional;
-      sincronizarLeite();
-    }
-
-    // entrega/retirada, pagamento, troco e observações (nome e endereço já são lembrados à parte)
-    ['recebimento', 'pagamento'].forEach(n => { const el = radioPor(n, String(r[n])); if(el) marca(el, true); });
-    if(typeof r.troco === 'string') document.getElementById('troco').value = r.troco.slice(0, 12);
-    if(typeof r.obs === 'string') document.getElementById('obs').value = r.obs.slice(0, 200);
-    atualizarResumo();
-    if(r.pixOk && r.pixOk === pixAtual){ pixConfirmado = true; visualConfirmaPix(); atualizarResumo(); } // voltou do app do banco com o Pix já pago
-  }catch(e){}
-  finally{ rascunhoPronto = true; } // roda mesmo quando não há rascunho (return antecipado)
-}
-// salva quando a pessoa sai da aba (troca de app, bloqueia a tela, fecha o navegador)
-document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') salvarRascunho(); });
-window.addEventListener('pagehide', salvarRascunho);
-document.addEventListener('freeze', salvarRascunho);
-// depois de enviar o pedido, só volta a salvar quando o cliente mexer em algo
-['change', 'input'].forEach(ev => document.addEventListener(ev, () => { rascunhoBloqueado = false; }, true));
-
 // ===== INICIALIZA =====
-montarSeletorBairro();
 carregarCliente();
 aplicarDisponibilidade();
 montarBotoesControle();
-restaurarRascunho();
 sincronizarRemoto(); setInterval(sincronizarRemoto, 5000);
 // outras abas do mesmo navegador atualizam na hora
 window.addEventListener('storage', e => { if(e.key === 'disp_acai'){ aplicarDisponibilidade(); montarBotoesControle(); } });
