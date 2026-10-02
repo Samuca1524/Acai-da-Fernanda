@@ -263,7 +263,7 @@ tailwind.config = {
   <div class="card">
     <h2 class="titulo" style="font-size:22px;margin:0 0 14px">6. Entrega ou Retirada</h2>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-      <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Entrega" onchange="atualizarResumo()"><span>🛵 Entrega</span></label>
+      <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Entrega" onchange="atualizarResumo()"><span>🛵 Entrega <small id="taxa-rotulo" style="font-size:12px;opacity:.85"></small></span></label>
       <label class="opcao" style="justify-content:center"><input type="radio" name="recebimento" value="Retirada" onchange="atualizarResumo()"><span>🏪 Retirada</span></label>
     </div>
   </div>
@@ -273,6 +273,7 @@ tailwind.config = {
     <input class="campo-nome" id="end-rua" placeholder="Rua / Avenida" oninput="atualizarResumo()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-num" placeholder="Número" oninput="atualizarResumo()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-bairro" placeholder="Bairro" oninput="atualizarResumo()" style="margin-bottom:10px">
+    <select class="campo-nome" id="end-bairro-sel" onchange="atualizarResumo()" style="margin-bottom:10px;display:none"></select>
     <input class="campo-nome" id="end-comp" placeholder="Complemento / referência (opcional)" oninput="atualizarResumo()">
   </div>
 
@@ -467,7 +468,7 @@ function salvarPrecos(){
 }
 
 // ===== LEMBRAR NOME E ENDEREÇO DO CLIENTE =====
-const CAMPOS_CLIENTE = ['nome-cliente', 'end-rua', 'end-num', 'end-bairro', 'end-comp'];
+const CAMPOS_CLIENTE = ['nome-cliente', 'end-rua', 'end-num', 'end-bairro', 'end-bairro-sel', 'end-comp'];
 let clienteCarregado = false;
 function carregarCliente(){
   try{
@@ -497,6 +498,7 @@ function alternarDisponibilidade(tipo, nome){
 
 function aplicarDisponibilidade(){
   aplicarPrecos();
+  montarSeletorBairro();
   let saborRemovido = false;
   document.querySelectorAll('[data-tipo]').forEach(el => {
     const tipo = el.dataset.tipo, nome = el.dataset.nome;
@@ -537,6 +539,12 @@ function montarBotoesControle(){
   ];
   const fechadaAgora = lojaFechada(), modo = lojaModo();
   let html = `<button class="btn-ctrl ${fechadaAgora?'off':'ok'}" style="width:100%;padding:14px;font-size:16px;margin:4px 0 4px" onclick="alternarLoja()">${fechadaAgora?'🔓 ABRIR LOJA agora':'🔒 FECHAR LOJA agora'}</button><p style="font-size:12px;margin:0 0 6px">Horário automático: abre às ${HORA_ABRE}h e fecha às ${HORA_FECHA}h. Agora: ${foraDoHorario()?'fora do horário':'dentro do horário'}. Loja ${fechadaAgora?'FECHADA':'ABERTA'}${textoAjusteManual()}.</p>`;
+  const lb = listaBairros();
+  html += `<p style="font-weight:700;color:#FACC15;margin:14px 0 4px;font-size:13px">🛵 Taxa de entrega por bairro</p>`;
+  if(!lb.length) html += `<p style="font-size:11px;margin:0 0 4px">Nenhum bairro cadastrado.</p>`;
+  lb.forEach((b, i) => { html += `<div style="display:flex;align-items:center;gap:6px;margin:3px 0;font-size:13px"><span style="flex:1">${esc(b.n)}</span><b>${reais(b.t)}</b><button class="btn-ctrl off" style="margin:0;padding:3px 9px" onclick="removerBairro(${i})">✕</button></div>`; });
+  html += `<div style="display:flex;gap:6px;margin-top:8px"><input id="novo-bairro" placeholder="Bairro" maxlength="40" style="padding:8px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700;flex:1;min-width:0"><input id="novo-bairro-taxa" type="number" step="0.5" min="0" placeholder="R$" style="padding:8px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700;width:70px"><button class="btn-ctrl ok" style="margin:0;padding:8px 12px" onclick="adicionarBairro()">➕</button></div><p style="font-size:11px;margin:4px 0 0">Com bairros cadastrados, o cliente escolhe o bairro numa lista e a taxa é somada sozinha. Cadastrar o mesmo nome atualiza o valor.</p>`;
+  html += `<p style="font-size:12px;margin:12px 0 4px">Taxa padrão (só vale se não houver nenhum bairro cadastrado)</p><div style="display:flex;gap:8px;align-items:center"><input id="taxa-entrega" type="number" step="0.5" min="0" value="${Number(carregarDisponibilidade().taxa) || 0}" style="padding:8px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700;width:90px"><button class="btn-ctrl ok" style="padding:10px 14px;margin:0" onclick="salvarTaxa()">💾 Salvar taxa</button></div>`;
   grupos.forEach(g => {
     html += `<p style="font-weight:700;color:#FACC15;margin:10px 0 4px;font-size:13px">${g.titulo}</p><div style="display:flex;flex-wrap:wrap">`;
     g.itens.forEach(([tipo,nome]) => {
@@ -764,6 +772,59 @@ function copoAtual(){
   return { sabores, tam: tamanhoEscolhido, preco: precoBase, frutas: marcados('.chk-fruta'), acomp: marcados('.chk-acomp'), cobert: marcados('.chk-cobert'), adicional: document.getElementById('adicional-leite').checked };
 }
 const precoCopo = c => c.preco + (c.adicional ? 2 : 0);
+// ===== TAXA DE ENTREGA POR BAIRRO (cadastrada no painel da engrenagem; cobrada automaticamente na Entrega) =====
+function listaBairros(){
+  const b = carregarDisponibilidade().bairros;
+  const arr = Array.isArray(b) ? b : (b ? Object.values(b) : []);
+  return arr.filter(x => x && x.n).map(x => ({ n: String(x.n), t: Number(x.t) || 0 }));
+}
+function bairroValor(){ return listaBairros().length ? document.getElementById('end-bairro-sel').value : val('end-bairro'); }
+function taxaEntrega(){
+  const lista = listaBairros();
+  if(lista.length){ const b = lista.find(x => x.n === bairroValor()); return b ? b.t : 0; }
+  const t = Number(carregarDisponibilidade().taxa); return t > 0 ? t : 0; // sem bairros cadastrados: usa a taxa padrão
+}
+function montarSeletorBairro(){
+  const sel = document.getElementById('end-bairro-sel'), inp = document.getElementById('end-bairro'), lista = listaBairros();
+  if(!lista.length){ sel.style.display = 'none'; inp.style.display = ''; return; }
+  let atual = sel.value;
+  if(!atual){ try{ atual = JSON.parse(localStorage.getItem('cliente_acai') || '{}')['end-bairro-sel'] || ''; }catch(e){} }
+  sel.innerHTML = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Selecione o bairro'; sel.appendChild(o0);
+  lista.forEach(b => { const o = document.createElement('option'); o.value = b.n; o.textContent = b.n + ' — ' + (b.t > 0 ? reais(b.t) : 'Grátis'); sel.appendChild(o); });
+  sel.value = atual; if(sel.value !== atual) sel.value = '';
+  inp.style.display = 'none'; sel.style.display = '';
+}
+function adicionarBairro(){
+  const nome = document.getElementById('novo-bairro').value.trim();
+  const taxa = parseFloat(String(document.getElementById('novo-bairro-taxa').value).replace(',', '.'));
+  if(!nome || isNaN(taxa) || taxa < 0){ alert('Digite o nome do bairro e um valor válido para a taxa (use 0 para grátis).'); return; }
+  const lista = listaBairros(), ex = lista.find(x => x.n.toLowerCase() === nome.toLowerCase());
+  if(ex) ex.t = taxa; else lista.push({ n: nome, t: taxa });
+  lista.sort((a, b) => a.n.localeCompare(b.n, 'pt-BR'));
+  const d = carregarDisponibilidade(); d.bairros = lista;
+  salvarDisponibilidade(d); aplicarDisponibilidade(); montarBotoesControle();
+}
+function removerBairro(i){
+  const lista = listaBairros(); lista.splice(i, 1);
+  const d = carregarDisponibilidade();
+  if(lista.length) d.bairros = lista; else delete d.bairros;
+  salvarDisponibilidade(d);
+  if(!lista.length && FIREBASE_URL) fetch(FIREBASE_URL + '/disp_acai/bairros.json', { method: 'DELETE' }).catch(() => {});
+  aplicarDisponibilidade(); montarBotoesControle();
+}
+function totais(copos, entrega){
+  const sub = copos.reduce((t, c) => t + precoCopo(c), 0);
+  const taxa = (entrega && sub > 0) ? taxaEntrega() : 0;
+  return { sub, taxa, total: sub + taxa };
+}
+function salvarTaxa(){
+  const v = parseFloat(String(document.getElementById('taxa-entrega').value).replace(',', '.'));
+  if(isNaN(v) || v < 0){ alert('Digite um valor válido para a taxa de entrega.'); return; }
+  const d = carregarDisponibilidade(); d.taxa = v;
+  salvarDisponibilidade(d); atualizarResumo(); montarBotoesControle();
+  alert('Taxa de entrega salva!');
+}
 const reais = n => 'R$ ' + n.toFixed(2).replace('.', ',');
 function todosCopos(){ const c = copoAtual(); return c ? carrinho.concat([c]) : carrinho.slice(); }
 function linhasCopo(c, b){
@@ -790,8 +851,8 @@ function dadosPedido(){
   const entrega = formaRecebimento === 'Entrega';
   document.getElementById('bloco-endereco').style.display = entrega ? 'block' : 'none';
   document.getElementById('bloco-troco').style.display = formaPagamento === 'Dinheiro' ? 'block' : 'none';
-  const end = entrega ? val('end-rua') + ', ' + val('end-num') + ' - ' + val('end-bairro') + (val('end-comp') ? ' (' + val('end-comp') + ')' : '') : '';
-  const endOk = !entrega || (val('end-rua') && val('end-num') && val('end-bairro'));
+  const end = entrega ? val('end-rua') + ', ' + val('end-num') + ' - ' + bairroValor() + (val('end-comp') ? ' (' + val('end-comp') + ')' : '') : '';
+  const endOk = !entrega || (val('end-rua') && val('end-num') && bairroValor());
   return { entrega, end, endOk, troco: formaPagamento === 'Dinheiro' ? val('troco') : '', obs: val('obs') };
 }
 function atualizarResumo(){
@@ -799,7 +860,8 @@ function atualizarResumo(){
   atualizarVisualAdicional();
   const d = dadosPedido(), copos = todosCopos();
   const resumo = document.getElementById('resumo'), btn = document.getElementById('btn-enviar');
-  const total = copos.reduce((t, c) => t + precoCopo(c), 0);
+  const { taxa, total } = totais(copos, d.entrega);
+  const rot = document.getElementById('taxa-rotulo'); if(rot) rot.textContent = (!listaBairros().length && taxaEntrega() > 0) ? '(+ ' + reais(taxaEntrega()) + ')' : (listaBairros().length ? '(taxa por bairro)' : '');
   document.getElementById('total').textContent = reais(total);
   document.getElementById('total-barra').textContent = reais(total);
   atualizarPix(total);
@@ -821,6 +883,11 @@ function atualizarResumo(){
   });
   h += '<p>◆ Recebimento: ' + (formaRecebimento ? B(formaRecebimento) : 'Ainda não escolhido') + '</p>';
   if(d.entrega) h += '<p>◆ Endereço: ' + (d.endOk ? B(d.end) : 'Preencha o endereço') + '</p>';
+  if(d.entrega){
+    const temLista = listaBairros().length;
+    if(taxa > 0) h += '<p>◆ Taxa de entrega: ' + B(reais(taxa)) + '</p>';
+    else if(temLista) h += '<p>◆ Taxa de entrega: ' + (bairroValor() ? B('Grátis') : 'Escolha o bairro') + '</p>';
+  }
   h += '<p>◆ Forma de Pagamento: ' + (formaPagamento ? B(formaPagamento) : 'Ainda não escolhida') + '</p>';
   if(d.troco) h += '<p>◆ Troco para: ' + B('R$ ' + d.troco) + '</p>';
   if(d.obs) h += '<p>◆ Observações: ' + B(d.obs) + '</p>';
@@ -840,7 +907,7 @@ async function enviarWhatsApp(){
   btnEnv.disabled = true; btnEnv.innerHTML = 'Enviando...';
   const janela = window.open('', '_blank'); // abre antes para o navegador não bloquear
   const d = dadosPedido(), copos = todosCopos(), B = t => '*' + t + '*';
-  const total = copos.reduce((t, c) => t + precoCopo(c), 0);
+  const { taxa, total } = totais(copos, d.entrega);
   const numero = await proximoNumeroPedido();
   const L = ['◆ PEDIDO ' + B('#' + numero) + ' DE ' + B(nomeCliente)];
   copos.forEach((c, i) => {
@@ -849,6 +916,7 @@ async function enviarWhatsApp(){
   });
   L.push('◆ Recebimento: ' + B(formaRecebimento));
   if(d.entrega) L.push('◆ Endereço: ' + B(d.end));
+  if(d.entrega && taxa > 0) L.push('◆ Taxa de entrega: ' + B(reais(taxa)));
   L.push('◆ Forma de Pagamento: ' + B(formaPagamento));
   if(PIX_CHAVE && formaPagamento === 'Pix') L.push('◆ Pix de ' + B(reais(total)) + ': vou enviar o comprovante em seguida');
   if(d.troco) L.push('◆ Troco para: ' + B('R$ ' + d.troco));
@@ -872,6 +940,7 @@ document.addEventListener('click', function(e){
 });
 
 // ===== INICIALIZA =====
+montarSeletorBairro();
 carregarCliente();
 aplicarDisponibilidade();
 montarBotoesControle();
