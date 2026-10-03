@@ -521,6 +521,12 @@ function aplicarDisponibilidade(){
   // recalcula os bloqueios por limite (libera as outras opcoes) e os itens ligados
   if(typeof sincronizarLeite === 'function') sincronizarLeite();
   if(saborRemovido) atualizarSabor();
+  if(carrinho.length){ // copos já adicionados ao pedido: remove o que esgotou e refaz os preços com os valores de hoje
+    const foto = () => JSON.stringify(carrinho.map(c => [c.sabores, c.frutas, c.acomp, c.cobert]));
+    const antes = foto();
+    carrinho = carrinho.map(copoSaneado).filter(Boolean);
+    if(antes !== foto()) setTimeout(() => alert('Algum item do seu pedido acabou e foi retirado. Confira o resumo.'), 50);
+  }
   atualizarLimites();
 }
 function montarBotoesControle(){
@@ -616,12 +622,13 @@ function resetarTudoAposSabor(){
   document.getElementById('aviso-frutas').textContent = 'Escolha o tamanho primeiro';
   document.getElementById('aviso-acomp').textContent = 'Escolha o tamanho primeiro';
   limparSelecoes();
+  atualizarLimites(); // zera os contadores das abas (Frutas 0, Acompanhamentos 0) e o destaque dos extras
 }
 
 function limparSelecoes(){
   memFrutas = []; memAcomp = [];
-  document.querySelectorAll('.chk-fruta, .chk-acomp, .chk-cobert').forEach(cb => { if(!cb.disabled){ cb.checked = false; cb.closest('.opcao').classList.remove('selecionado'); } });
-  const al = document.getElementById('adicional-leite'); al.checked = false;
+  document.querySelectorAll('.chk-fruta, .chk-acomp, .chk-cobert').forEach(cb => { cb.checked = false; cb.closest('.opcao').classList.remove('selecionado', 'extra-pago'); });
+  const al = document.getElementById('adicional-leite'); al.checked = false; al.closest('.opcao').classList.remove('selecionado');
 }
 
 // ===== ABAS DO TAMANHO (Tradicional / Nutella) =====
@@ -788,7 +795,7 @@ function copoSaneado(c){
   const frutas = lista(c.frutas).filter(x => NF.includes(x)), acomp = lista(c.acomp).filter(x => NA.includes(x));
   const nF = Math.max(0, frutas.length - parseInt(op.dataset.frutas)), nA = Math.max(0, acomp.length - parseInt(op.dataset.acomp));
   return { sabores, tam: rt.value, preco: parseFloat(op.dataset.preco), frutas, acomp, cobert: lista(c.cobert).filter(x => NC.includes(x)),
-           adicional: !!c.adicional, nF, nA, extra: nF * Number(pe.f) + nA * Number(pe.a) };
+           adicional: !!c.adicional && lista(c.cobert).some(x => NC.includes(x) && /Leite/.test(x)), nF, nA, extra: nF * Number(pe.f) + nA * Number(pe.a) };
 }
 
 // ===== REPETIR ÚLTIMO PEDIDO =====
@@ -836,7 +843,7 @@ function novoCopo(){
   rascunhoBloqueado = false;
   carrinho.push(c);
   document.querySelectorAll('input[name="sabor"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
-  atualizarSabor(); trocarAba('tradicional');
+  atualizarSabor(); trocarAba('tradicional'); trocarAbaFA('fr');
   window.scrollTo({ top: 0, behavior: 'smooth' });
   atualizarResumo();
 }
