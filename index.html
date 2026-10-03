@@ -298,11 +298,6 @@ tailwind.config = {
       <label class="opcao"><input type="radio" name="pagamento" value="Cartão de Débito" onchange="atualizarResumo()"><span>🏧 Débito</span></label>
     </div>
   </div>
-    <div class="sub" id="bloco-troco" style="display:none">
-    <h3 class="titulo sub-titulo">Troco</h3>
-    <p style="font-size:13px;margin:0 0 12px">Troco para quanto? (deixe vazio se não precisar)</p>
-    <input class="campo-nome" id="troco" inputmode="decimal" placeholder="Ex.: 50" oninput="atualizarResumo()">
-  </div>
     <div class="sub">
     <h3 class="titulo sub-titulo">Observações</h3>
     <p style="font-size:13px;margin:0 0 12px">Opcional: ex.: sem granola, sem canudo...</p>
@@ -852,10 +847,9 @@ function dadosPedido(){
   formaRecebimento = rec ? rec.value : ''; formaPagamento = pag ? pag.value : ''; nomeCliente = val('nome-cliente');
   const entrega = formaRecebimento === 'Entrega';
   document.getElementById('bloco-endereco').style.display = entrega ? 'block' : 'none';
-  document.getElementById('bloco-troco').style.display = formaPagamento === 'Dinheiro' ? 'block' : 'none';
   const end = entrega ? val('end-rua') + ', ' + val('end-num') + ' - ' + val('end-bairro') + (val('end-comp') ? ' (' + val('end-comp') + ')' : '') : '';
   const endOk = !entrega || (val('end-rua') && val('end-num') && val('end-bairro'));
-  return { entrega, end, endOk, troco: formaPagamento === 'Dinheiro' ? val('troco') : '', obs: val('obs') };
+  return { entrega, end, endOk, obs: val('obs') };
 }
 function atualizarResumo(){
   aplicarSoRetirada();
@@ -888,7 +882,6 @@ function atualizarResumo(){
   if(textoTempo()) h += '<p>◆ Tempo estimado: ' + B(textoTempo()) + '</p>';
   if(d.entrega) h += '<p>◆ Endereço: ' + (d.endOk ? B(d.end) : 'Preencha o endereço') + '</p>';
   h += '<p>◆ Forma de Pagamento: ' + (formaPagamento ? B(formaPagamento) : 'Ainda não escolhida') + '</p>';
-  if(d.troco) h += '<p>◆ Troco para: ' + B('R$ ' + d.troco) + '</p>';
   if(d.obs) h += '<p>◆ Observações: ' + B(d.obs) + '</p>';
   h += '<p>◆ Nome: ' + (nomeCliente ? B(nomeCliente) : 'Ainda não informado') + '</p>';
   resumo.innerHTML = h;
@@ -917,7 +910,6 @@ async function enviarWhatsApp(){
   if(textoTempo()) L.push('◆ Tempo estimado: ' + B(textoTempo()));
   if(d.entrega) L.push('◆ Endereço: ' + B(d.end));
   L.push('◆ Forma de Pagamento: ' + B(formaPagamento));
-  if(d.troco) L.push('◆ Troco para: ' + B('R$ ' + d.troco));
   if(d.obs) L.push('◆ Observações: ' + B(d.obs));
   L.push('◆ Total: ' + B(reais(total)), 'Olá! Gostaria de confirmar meu pedido! ◆');
   const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(L.join('\n\n'));
@@ -956,7 +948,7 @@ function rascunhoAtual(){
     cobert: marcados('.chk-cobert'),
     adicional: document.getElementById('adicional-leite').checked,
     recebimento: radio('recebimento'), pagamento: radio('pagamento'),
-    troco: document.getElementById('troco').value, obs: document.getElementById('obs').value
+    obs: document.getElementById('obs').value
   };
 }
 function salvarRascunho(forcar){
@@ -964,7 +956,7 @@ function salvarRascunho(forcar){
   if(document.visibilityState === 'hidden' && !forcar) return; // aba em segundo plano: os timers não renovam o prazo
   try{
     const r = rascunhoAtual();
-    const vazio = !r.carrinho.length && !r.sabores.length && !r.recebimento && !r.pagamento && !r.troco && !r.obs;
+    const vazio = !r.carrinho.length && !r.sabores.length && !r.recebimento && !r.pagamento && !r.obs;
     if(vazio) localStorage.removeItem(RASCUNHO_KEY); else localStorage.setItem(RASCUNHO_KEY, JSON.stringify(r));
   }catch(e){}
 }
@@ -1001,9 +993,8 @@ function restaurarRascunho(){
       ad.checked = !!r.adicional && !!leite && leite.checked;
     }
 
-    // entrega/retirada, pagamento, troco e observações (nome e endereço já são lembrados à parte)
+    // entrega/retirada, pagamento e observações (nome e endereço já são lembrados à parte)
     ['recebimento', 'pagamento'].forEach(n => { const el = radioPor(n, String(r[n])); if(el && !el.disabled) marca(el, true); });
-    if(typeof r.troco === 'string') document.getElementById('troco').value = r.troco.slice(0, 12);
     if(typeof r.obs === 'string') document.getElementById('obs').value = r.obs.slice(0, 200);
     atualizarResumo();
   }catch(e){}
