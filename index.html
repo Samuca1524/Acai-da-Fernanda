@@ -363,7 +363,7 @@ function salvarDisponibilidade(d){
     .catch(() => alert('Sem conexão: o esgotado não foi enviado para os clientes.'));
 }
 async function sincronizarRemoto(){
-  if(!FIREBASE_URL || Date.now() - ultimoSalvar < 6000) return; // espera o envio terminar antes de reler
+  if(!FIREBASE_URL || document.visibilityState === 'hidden' || Date.now() - ultimoSalvar < 6000) return; // aba escondida não consulta (economiza o Firebase e a bateria) // espera o envio terminar antes de reler
   try{
     const d = (await (await fetch(FIREBASE_URL + '/disp_acai.json')).json()) || {};
     delete d.contador; delete d.visitas;
@@ -923,6 +923,7 @@ async function enviarWhatsApp(){
   try{ localStorage.setItem('ultimo_pedido_acai', JSON.stringify(copos)); }catch(e){} // guarda para o botão "Repetir meu último pedido"
   mostrarBtnRepetir();
   limparRascunho(); // pedido enviado: não restaurar este pedido de novo (volta a salvar assim que o cliente mexer em algo)
+  pedidoEnviado = true; // ao voltar para o site, reinicia o pedido
   if(janela) janela.location.href = url; else location.href = url;
   atualizarPedidosHoje();
   atualizarResumo();
@@ -1016,6 +1017,29 @@ document.addEventListener('freeze', () => salvarRascunho(true));
 // depois de enviar o pedido, só volta a salvar quando o cliente mexer em algo
 ['change', 'input'].forEach(ev => document.addEventListener(ev, () => { rascunhoBloqueado = false; }, true));
 
+// ===== DEPOIS DE ENVIAR: quando o cliente voltar para o site/app, o pedido recomeça do zero =====
+let pedidoEnviado = false;
+function reiniciarPedido(){
+  carrinho = [];
+  document.querySelectorAll('input[name="sabor"], input[name="recebimento"], input[name="pagamento"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
+  atualizarSabor();                       // zera tamanho, frutas, acompanhamentos, coberturas e adicional
+  trocarAba('tradicional'); trocarAbaFA('fr');
+  document.getElementById('obs').value = ''; // nome e endereço continuam (o site lembra do cliente)
+  atualizarResumo();
+  window.scrollTo({ top: 0 });
+}
+function voltouAoSite(){
+  if(!pedidoEnviado) return;
+  pedidoEnviado = false;
+  reiniciarPedido();
+  const t = document.createElement('div');
+  t.textContent = '✅ Pedido enviado! Obrigado pela preferência.';
+  t.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:200;background:#22C55E;color:#052E16;font-weight:700;padding:12px 20px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.4);text-align:center';
+  document.body.appendChild(t); setTimeout(() => t.remove(), 5000);
+}
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') voltouAoSite(); });
+window.addEventListener('pageshow', e => { if(e.persisted) voltouAoSite(); });
+
 // ===== INICIALIZA =====
 carregarCliente();
 mostrarBtnRepetir();
@@ -1024,6 +1048,7 @@ aplicarDisponibilidade();
 montarBotoesControle();
 restaurarRascunho();
 sincronizarRemoto(); setInterval(sincronizarRemoto, 5000);
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') sincronizarRemoto(); }); // ao voltar para a aba, atualiza na hora
 // outras abas do mesmo navegador atualizam na hora
 window.addEventListener('storage', e => { if(e.key === 'disp_acai'){ aplicarDisponibilidade(); montarBotoesControle(); } });
 </script>
