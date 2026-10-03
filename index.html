@@ -910,18 +910,24 @@ async function enviarWhatsApp(){
   const d = dadosPedido(), copos = todosCopos(), B = t => '*' + t + '*';
   const total = copos.reduce((t, c) => t + precoCopo(c), 0);
   const numero = await proximoNumeroPedido();
-  const L = ['◆ PEDIDO ' + B('#' + numero) + ' DE ' + B(nomeCliente)];
+  const hora = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+  const vazia = l => /: Nenhuma?$/.test(l); // linhas sem escolha ("Frutas: Nenhum") ficam de fora
+  const L = [
+    '🧾 ' + B('PEDIDO #' + numero) + ' • ' + B(nomeCliente) + ' • ' + hora + '\n' +
+    (d.entrega ? '🛵 ' + B('ENTREGA') : '🏪 ' + B('RETIRADA')) + ' • 💳 ' + B(formaPagamento) + ' • 💰 ' + B(reais(total))
+  ];
   copos.forEach((c, i) => {
-    // cada copo vira um bloco só (linhas coladas); a linha em branco fica entre um copo e outro
-    L.push([B(larga('COPO ' + (i + 1))) + ' ━━━━━━━━━━▶' + (copos.length > 1 ? ' ' + B(reais(precoCopo(c))) : ''), ...linhasCopo(c, B).map(l => l.replace(/^◆ (Sabor e tamanho|Frutas|Acompanhamentos|Coberturas):/, '🔹 $1:'))].filter(Boolean).join('\n'));
+    // cada copo é um bloco só (linhas coladas); a linha em branco fica entre um copo e outro
+    const titulo = B(larga('COPO ' + (i + 1))) + (copos.length > 1 ? ' de ' + copos.length : '') + ' ━━━━━━━━━━▶' + (copos.length > 1 ? ' ' + B(reais(precoCopo(c))) : '');
+    const linhas = linhasCopo(c, B).filter(l => !vazia(l)).map(l => l.replace(/^◆ (Sabor e tamanho|Frutas|Acompanhamentos|Coberturas):/, '🔹 $1:'));
+    L.push([titulo, ...linhas].join('\n'));
   });
-  L.push('━━━━━━━━━━━━━━━━━━━━'); // separa os copos da parte de entrega e pagamento
-  L.push('◆ Recebimento: ' + B(formaRecebimento));
-  if(textoTempo()) L.push('◆ Tempo estimado: ' + B(textoTempo()));
-  if(d.entrega) L.push('◆ Endereço: ' + B(d.end));
-  L.push('◆ Forma de Pagamento: ' + B(formaPagamento));
-  if(d.obs) L.push('◆ Observações: ' + B(d.obs));
-  L.push('◆ Total: ' + B(reais(total)), 'Olá! Gostaria de confirmar meu pedido! ◆');
+  const rodape = ['━━━━━━━━━━━━━━━━━━━━'];
+  if(d.entrega) rodape.push('📍 ' + B(d.end));
+  if(textoTempo()) rodape.push('⏱ Tempo estimado: ' + B(textoTempo()));
+  if(d.obs) rodape.push('⚠️ ' + B('OBSERVAÇÃO:') + ' ' + d.obs);
+  rodape.push('💰 ' + B('TOTAL: ' + reais(total)) + ' (' + formaPagamento + ')');
+  L.push(rodape.join('\n'));
   const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(L.join('\n\n'));
   try{ localStorage.setItem('ultimo_pedido_acai', JSON.stringify(copos)); }catch(e){} // guarda para o botão "Repetir meu último pedido"
   mostrarBtnRepetir();
