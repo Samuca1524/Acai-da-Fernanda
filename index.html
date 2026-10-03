@@ -80,6 +80,10 @@ tailwind.config = {
   .opcao.adicional .check-ad { width: 26px; height: 26px; color: transparent; text-align: center; flex-shrink: 0; transition: all .2s; }
   .opcao.adicional.selecionado { border: 3px solid #22C55E; background-color: rgba(34,197,94,.22); box-shadow: 0 0 14px rgba(34,197,94,.55); opacity: 1; transform: none; }
   .opcao.adicional.selecionado .check-ad { color: #22C55E; }
+  .opcao.extra-pago.selecionado { border: 3px solid #22C55E; background-color: rgba(34,197,94,.22); box-shadow: 0 0 14px rgba(34,197,94,.55); }
+  .opcao.extra-pago.selecionado { flex-wrap: wrap; row-gap: 4px; }
+  .opcao.extra-pago.selecionado > span { flex: 1 1 100%; }
+  .opcao.extra-pago.selecionado::after { content: 'Adicional'; background: #22C55E; color: #052E16; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; padding: 3px 8px; border-radius: 999px; }
   .opcao.indisponivel { opacity: .35; pointer-events: none; position: relative; }
   .tag-esgotado { position: absolute; top: 4px; right: 6px; font-size: 9px; background: #EF4444; color: #fff; padding: 2px 5px; border-radius: 4px; font-weight: 700; }
   .titulo { font-family: 'Fredoka One', sans-serif; color: #FACC15; }
@@ -556,7 +560,6 @@ function montarBotoesControle(){
   html += `<p style="font-weight:700;color:#FACC15;margin:14px 0 4px;font-size:13px">Preço de cada extra (R$)</p><div style="display:flex;gap:6px;flex-wrap:wrap"><label style="font-size:11px">Fruta extra<br><input id="ex-f" type="number" step="0.5" min="0" value="${pex.f}" style="width:80px;padding:6px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700"></label><label style="font-size:11px">Acomp. extra<br><input id="ex-a" type="number" step="0.5" min="0" value="${pex.a}" style="width:80px;padding:6px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700"></label></div><button class="btn-ctrl ok" style="width:100%;padding:12px;margin-top:10px" onclick="salvarExtras()">💾 Salvar extras</button>`;
   html = `<p id=\"pedidos-hoje\" style=\"font-weight:700;color:#2D0C5E;background:#FACC15;border-radius:10px;padding:8px 12px;margin:0 0 8px;font-size:15px\">Pedidos de hoje: ...</p>` + html;
   container.innerHTML = html;
-  try{ localStorage.setItem('ultimo_pedido_acai', JSON.stringify(copos)); }catch(e){}
   atualizarPedidosHoje();
 }
 
@@ -679,6 +682,17 @@ function atualizarTamanho(input){
   atualizarLimites();
 }
 
+// ===== EXTRAS PAGOS FICAM VERDES =====
+// Os primeiros itens (até o limite do tamanho) estão incluídos; os que vêm depois, na ordem da escolha, são cobrados e ficam verdes.
+function marcarExtrasPagos(){
+  [['.chk-fruta', memFrutas, limiteFrutas], ['.chk-acomp', memAcomp, limiteAcomp]].forEach(([sel, mem, lim]) => {
+    const cbs = Array.from(document.querySelectorAll(sel)), marcadosAgora = cbs.filter(c => c.checked).map(c => c.value);
+    const ordem = mem.filter(n => marcadosAgora.includes(n)).concat(marcadosAgora.filter(n => !mem.includes(n)));
+    const extras = ordem.slice(lim);
+    cbs.forEach(c => c.closest('.opcao').classList.toggle('extra-pago', c.checked && extras.includes(c.value)));
+  });
+}
+
 // ===== LIMITES FRUTAS / ACOMP =====
 function atualizarLimites(el){
   if(el){
@@ -698,6 +712,7 @@ function atualizarLimites(el){
     document.getElementById('aviso-frutas').textContent = 'Inclui ' + limiteFrutas + ' fruta(s) • cada extra: +' + r(pe.f);
     document.getElementById('aviso-acomp').textContent = 'Inclui ' + limiteAcomp + ' acompanhamento(s) • cada extra: +' + r(pe.a);
   }
+  marcarExtrasPagos();
   atualizarResumo();
 }
 
@@ -768,12 +783,27 @@ function aplicarSoRetirada(){
   document.getElementById('aviso-so-retirada').style.display = so ? 'block' : 'none';
 }
 
+// ===== COPO SALVO -> COPO VÁLIDO HOJE (preços, limites e extras refeitos; itens esgotados ou removidos saem) =====
+function copoSaneado(c){
+  const lista = a => Array.isArray(a) ? a.map(String) : [];
+  const ok = sel => Array.from(document.querySelectorAll(sel)).filter(i => !i.closest('.opcao').classList.contains('indisponivel')).map(i => i.value);
+  const rt = c && Array.from(document.querySelectorAll('input[name="tamanho"]')).find(i => i.value === String(c.tam)); if(!rt) return null;
+  const op = rt.closest('.opcao'), NS = ok('input[name="sabor"]'), sabores = lista(c.sabores).filter(x => NS.includes(x)); if(!sabores.length) return null;
+  const NF = ok('.chk-fruta'), NA = ok('.chk-acomp'), NC = ok('.chk-cobert'), pe = precoExtra();
+  const frutas = lista(c.frutas).filter(x => NF.includes(x)), acomp = lista(c.acomp).filter(x => NA.includes(x));
+  const nF = Math.max(0, frutas.length - parseInt(op.dataset.frutas)), nA = Math.max(0, acomp.length - parseInt(op.dataset.acomp));
+  return { sabores, tam: rt.value, preco: parseFloat(op.dataset.preco), frutas, acomp, cobert: lista(c.cobert).filter(x => NC.includes(x)),
+           adicional: !!c.adicional, nF, nA, extra: nF * Number(pe.f) + nA * Number(pe.a) };
+}
+
 // ===== REPETIR ÚLTIMO PEDIDO =====
 function mostrarBtnRepetir(){ try{ if(JSON.parse(localStorage.getItem('ultimo_pedido_acai') || '[]').length) document.getElementById('btn-repetir').style.display = 'block'; }catch(e){} }
 function repetirUltimo(){
   let lista = []; try{ lista = JSON.parse(localStorage.getItem('ultimo_pedido_acai') || '[]'); }catch(e){}
   if(!lista.length) return;
-  const c = lista[lista.length - 1]; carrinho = lista.slice(0, -1);
+  if((carrinho.length || copoAtual()) && !confirm('Isso substitui o pedido que você está montando. Continuar?')) return;
+  rascunhoBloqueado = false;
+  const c = lista[lista.length - 1]; carrinho = lista.slice(0, -1).map(copoSaneado).filter(Boolean);
   document.querySelectorAll('input[name="sabor"]').forEach(i => { i.checked = c.sabores.includes(i.value) && !i.disabled; i.closest('.opcao').classList.toggle('selecionado', i.checked); });
   atualizarSabor();
   trocarAba(c.tam.includes('Nutella') ? 'nutella' : 'tradicional');
@@ -808,13 +838,14 @@ function linhasCopo(c, b){
 }
 function novoCopo(){
   const c = copoAtual(); if(!c) return;
+  rascunhoBloqueado = false;
   carrinho.push(c);
   document.querySelectorAll('input[name="sabor"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
   atualizarSabor(); trocarAba('tradicional');
   window.scrollTo({ top: 0, behavior: 'smooth' });
   atualizarResumo();
 }
-function removerCopo(i){ carrinho.splice(i, 1); atualizarResumo(); }
+function removerCopo(i){ rascunhoBloqueado = false; carrinho.splice(i, 1); atualizarResumo(); }
 function dadosPedido(){
   const rec = document.querySelector('input[name="recebimento"]:checked');
   const pag = document.querySelector('input[name="pagamento"]:checked');
@@ -830,6 +861,7 @@ function atualizarResumo(){
   aplicarSoRetirada();
   atualizarTempo();
   salvarCliente();
+  salvarRascunho();
   atualizarVisualAdicional();
   const d = dadosPedido(), copos = todosCopos();
   const resumo = document.getElementById('resumo'), btn = document.getElementById('btn-enviar');
@@ -889,6 +921,9 @@ async function enviarWhatsApp(){
   if(d.obs) L.push('◆ Observações: ' + B(d.obs));
   L.push('◆ Total: ' + B(reais(total)), 'Olá! Gostaria de confirmar meu pedido! ◆');
   const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(L.join('\n\n'));
+  try{ localStorage.setItem('ultimo_pedido_acai', JSON.stringify(copos)); }catch(e){} // guarda para o botão "Repetir meu último pedido"
+  mostrarBtnRepetir();
+  limparRascunho(); // pedido enviado: não restaurar este pedido de novo (volta a salvar assim que o cliente mexer em algo)
   if(janela) janela.location.href = url; else location.href = url;
   atualizarPedidosHoje();
   atualizarResumo();
@@ -905,12 +940,91 @@ document.addEventListener('click', function(e){
   if(!dentro && !naEngrenagem) painel.classList.remove('aberto');
 });
 
+// ===== RASCUNHO DO PEDIDO: salva ao sair da aba e restaura ao voltar (vale 1 hora) =====
+const RASCUNHO_KEY = 'rascunho_acai', RASCUNHO_VALIDADE_MIN = 60; // rascunho mais velho que isso é descartado
+let rascunhoPronto = false, rascunhoBloqueado = false, rascunhoSaida = 0;
+function rascunhoAtual(){
+  const radio = n => { const r = document.querySelector('input[name="' + n + '"]:checked'); return r ? r.value : ''; };
+  return {
+    ts: (document.visibilityState === 'hidden' && rascunhoSaida) ? rascunhoSaida : Date.now(), // a hora conta a partir do momento em que saiu da aba
+    carrinho: carrinho,
+    sabores: marcados('input[name="sabor"]'),
+    aba: document.getElementById('aba-nutella').classList.contains('ativa') ? 'nutella' : 'tradicional',
+    abaFA: document.getElementById('aba-ac').classList.contains('ativa') ? 'ac' : 'fr',
+    tamanho: tamanhoEscolhido,
+    frutas: memFrutas.slice(), acomp: memAcomp.slice(),
+    cobert: marcados('.chk-cobert'),
+    adicional: document.getElementById('adicional-leite').checked,
+    recebimento: radio('recebimento'), pagamento: radio('pagamento'),
+    troco: document.getElementById('troco').value, obs: document.getElementById('obs').value
+  };
+}
+function salvarRascunho(forcar){
+  if(!rascunhoPronto || rascunhoBloqueado) return;
+  if(document.visibilityState === 'hidden' && !forcar) return; // aba em segundo plano: os timers não renovam o prazo
+  try{
+    const r = rascunhoAtual();
+    const vazio = !r.carrinho.length && !r.sabores.length && !r.recebimento && !r.pagamento && !r.troco && !r.obs;
+    if(vazio) localStorage.removeItem(RASCUNHO_KEY); else localStorage.setItem(RASCUNHO_KEY, JSON.stringify(r));
+  }catch(e){}
+}
+function limparRascunho(){ try{ localStorage.removeItem(RASCUNHO_KEY); }catch(e){} rascunhoBloqueado = true; }
+function restaurarRascunho(){
+  try{
+    const r = JSON.parse(localStorage.getItem(RASCUNHO_KEY) || 'null');
+    if(!r || !r.ts || Date.now() - r.ts > RASCUNHO_VALIDADE_MIN * 60000){ localStorage.removeItem(RASCUNHO_KEY); return; }
+    const lista = a => Array.isArray(a) ? a.map(String) : [];
+    const validos = sel => Array.from(document.querySelectorAll(sel)).filter(i => !i.closest('.opcao').classList.contains('indisponivel')).map(i => i.value);
+    const NS = validos('input[name="sabor"]'), NF = validos('.chk-fruta'), NA = validos('.chk-acomp'), NC = validos('.chk-cobert');
+    const filtra = (a, ok) => lista(a).filter(x => ok.includes(x));
+    const radioPor = (nome, v) => Array.from(document.querySelectorAll('input[name="' + nome + '"]')).find(i => i.value === v);
+    const marca = (i, on) => { i.checked = on; i.closest('.opcao').classList.toggle('selecionado', on); };
+
+    // copos já adicionados ao pedido (preço e extras refeitos com os valores atuais)
+    carrinho = (Array.isArray(r.carrinho) ? r.carrinho : []).map(copoSaneado).filter(Boolean);
+
+    // copo que estava sendo montado
+    const sab = filtra(r.sabores, NS);
+    document.querySelectorAll('input[name="sabor"]').forEach(i => marca(i, sab.includes(i.value)));
+    atualizarSabor();
+    if(sab.length){
+      const rt = radioPor('tamanho', String(r.tamanho));
+      trocarAba((rt ? !!rt.closest('#grade-nutella') : r.aba === 'nutella') ? 'nutella' : 'tradicional');
+      if(rt){
+        memFrutas = filtra(r.frutas, NF); memAcomp = filtra(r.acomp, NA);
+        marca(rt, true); atualizarTamanho(rt);
+      }
+      trocarAbaFA(r.abaFA === 'ac' ? 'ac' : 'fr');
+      const cob = filtra(r.cobert, NC);
+      document.querySelectorAll('.chk-cobert').forEach(i => marca(i, cob.includes(i.value)));
+      const ad = document.getElementById('adicional-leite'), leite = document.querySelector('.chk-cobert[value*="Leite"]');
+      ad.checked = !!r.adicional && !!leite && leite.checked;
+    }
+
+    // entrega/retirada, pagamento, troco e observações (nome e endereço já são lembrados à parte)
+    ['recebimento', 'pagamento'].forEach(n => { const el = radioPor(n, String(r[n])); if(el && !el.disabled) marca(el, true); });
+    if(typeof r.troco === 'string') document.getElementById('troco').value = r.troco.slice(0, 12);
+    if(typeof r.obs === 'string') document.getElementById('obs').value = r.obs.slice(0, 200);
+    atualizarResumo();
+  }catch(e){}
+  finally{ rascunhoPronto = true; } // roda mesmo quando não há rascunho (return antecipado)
+}
+// salva quando a pessoa sai da aba (troca de app, bloqueia a tela, fecha o navegador)
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden'){ rascunhoSaida = Date.now(); salvarRascunho(true); } else rascunhoSaida = 0;
+});
+window.addEventListener('pagehide', () => salvarRascunho(true));
+document.addEventListener('freeze', () => salvarRascunho(true));
+// depois de enviar o pedido, só volta a salvar quando o cliente mexer em algo
+['change', 'input'].forEach(ev => document.addEventListener(ev, () => { rascunhoBloqueado = false; }, true));
+
 // ===== INICIALIZA =====
 carregarCliente();
 mostrarBtnRepetir();
 contarVisita();
 aplicarDisponibilidade();
 montarBotoesControle();
+restaurarRascunho();
 sincronizarRemoto(); setInterval(sincronizarRemoto, 5000);
 // outras abas do mesmo navegador atualizam na hora
 window.addEventListener('storage', e => { if(e.key === 'disp_acai'){ aplicarDisponibilidade(); montarBotoesControle(); } });
