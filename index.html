@@ -913,7 +913,7 @@ async function enviarWhatsApp(){
   const L = ['◆ PEDIDO ' + B('#' + numero) + ' DE ' + B(nomeCliente)];
   copos.forEach((c, i) => {
     // cada copo vira um bloco só (linhas coladas); a linha em branco fica entre um copo e outro
-    L.push([B(larga('COPO ' + (i + 1))) + ' ━━━━━━━━━━▶', ...linhasCopo(c, B)].filter(Boolean).join('\n'));
+    L.push([B(larga('COPO ' + (i + 1))) + ' ━━━━━━━━━━▶' + (copos.length > 1 ? ' ' + B(reais(precoCopo(c))) : ''), ...linhasCopo(c, B)].filter(Boolean).join('\n'));
   });
   L.push('━━━━━━━━━━━━━━━━━━━━'); // separa os copos da parte de entrega e pagamento
   L.push('◆ Recebimento: ' + B(formaRecebimento));
