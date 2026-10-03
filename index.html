@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#2D0C5E">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FoodEstablishment", "name": "Açaí da Fernanda", "url": "https://samuca1524.github.io/Acai-da-Fernanda/", "image": "https://samuca1524.github.io/Acai-da-Fernanda/logo-link.jpg", "telephone": "+5511979908372", "servesCuisine": "Açaí", "address": {"@type": "PostalAddress", "addressLocality": "Itaquaquecetuba", "addressRegion": "SP", "addressCountry": "BR"}, "openingHours": "Mo-Su 13:00-22:00", "sameAs": ["https://www.instagram.com/acai_dafernanda"]}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js" crossorigin="anonymous"></script>
 <meta name="color-scheme" content="only light">
 <meta name="darkreader-lock">
 <style>:root { color-scheme: only light; }</style>
@@ -71,6 +72,18 @@ tailwind.config = {
   .sub { margin-top: 20px; padding-top: 18px; border-top: 1px solid #5A189A; }
   .card > div.sub:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
   .sub-titulo { font-size: 19px !important; margin: 0 0 10px !important; }
+  img.emoji { height: 1.1em; width: 1.1em; vertical-align: -0.15em; margin: 0 .08em; }
+  .opcao { position: relative; }
+  .card { scroll-margin-top: 58px; animation: sobe .45s ease both; }
+  .opcao.selecionado { animation: pop .22s ease; }
+  @keyframes pop { 0% { transform: scale(.96); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+  @keyframes sobe { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes bump { 50% { transform: scale(1.18); } }
+  .bump { display: inline-block; animation: bump .3s; }
+  .selo { position: absolute; top: -9px; right: 8px; background: #FACC15; color: #2D0C5E; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; box-shadow: 0 1px 4px rgba(0,0,0,.3); white-space: nowrap; }
+  footer.rodape { text-align: center; padding: 8px 16px 20px; font-size: 14px; color: #2D0C5E; line-height: 1.7; }
+  footer.rodape a { color: #2D0C5E; font-weight: 700; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   .abas-tamanho { display: flex; gap: 8px; margin-bottom: 12px; }
   .aba { flex: 1; padding: 10px 12px; border-radius: 999px; border: 2px solid #5A189A; background: #4A1599; color: #FACC15; font-weight: 700; font-size: 15px; cursor: pointer; transition: all .2s; }
   .aba:hover { border-color: #FACC15; }
@@ -152,7 +165,7 @@ tailwind.config = {
     <p id="aviso-tamanho" style="font-size:13px;color:#FACC15;margin:0 0 12px">Escolha o sabor primeiro</p>
     <div class="abas-tamanho">
       <button type="button" class="aba ativa" id="aba-tradicional" onclick="trocarAba('tradicional')">Tradicional</button>
-      <button type="button" class="aba" id="aba-nutella" onclick="trocarAba('nutella')">🍫 Com Nutella</button>
+      <button type="button" class="aba" id="aba-nutella" onclick="trocarAba('nutella')" style="position:relative">🍫 Com Nutella<span class="selo">NOVO</span></button>
     </div>
     <div id="tamanhos" class="bloqueado">
       <div id="grade-tradicional" class="grade-tam">
@@ -328,6 +341,7 @@ tailwind.config = {
   <p style="text-align:center;color:#FACC15;font-size:13px;margin-top:16px">(11) 97990-8372 • @acai_dafernanda • Entrega em domicílio</p>
 <p id="link-google" style="display:none;text-align:center;margin:10px 0 24px"><a id="a-google" target="_blank" rel="noopener" style="color:#2D0C5E;font-weight:700">⭐ Gostou? Avalie a gente no Google</a></p>
 </main>
+<footer class="rodape"><strong>Açaí da Fernanda</strong><br>🕐 Todos os dias, das 13h às 22h • 📍 Itaquaquecetuba - SP<br>🛵 Entrega em domicílio ou 🏪 retirada<br>📸 <a href="https://www.instagram.com/acai_dafernanda" target="_blank" rel="noopener">@acai_dafernanda</a> • 💬 <a href="https://wa.me/5511979908372" target="_blank" rel="noopener">(11) 97990-8372</a><br><span style="font-size:12px;opacity:.75">O pedido é confirmado pelo WhatsApp</span></footer>
 
 <div id="barra-total"><span>Total: <span id="total-barra" class="preco">R$ 0,00</span></span><button type="button" onclick="document.getElementById('resumo').scrollIntoView({behavior:'smooth',block:'center'})">Ver pedido ↓</button></div>
 <script>
@@ -817,6 +831,17 @@ function repetirUltimo(){
   atualizarResumo();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+// ===== PROGRESSO FIXO, BOTÃO CONTINUAR, AVISO DO QUE FALTA, SELOS E ÍCONES =====
+const SELOS = { '500ml': '⭐ Mais pedido' }; // selos nos tamanhos (troque o texto ou acrescente outros)
+function adicionarSelos(){
+  document.querySelectorAll('input[name="tamanho"]').forEach(i => {
+    const nome = i.value.replace(' com Nutella', '');
+    if(SELOS[nome] && !i.closest('.opcao').querySelector('.selo')) i.closest('.opcao').insertAdjacentHTML('beforeend', '<span class="selo">' + SELOS[nome] + '</span>');
+  });
+}
+const parseEmoji = () => { if(window.twemoji) twemoji.parse(document.body, { folder: 'svg', ext: '.svg' }); };
+let tEmoji; new MutationObserver(() => { clearTimeout(tEmoji); tEmoji = setTimeout(parseEmoji, 60); }).observe(document.body, { childList: true, subtree: true, characterData: true });
+
 let carrinho = [];
 const esc = t => String(t).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const val = id => document.getElementById(id).value.trim();
@@ -868,7 +893,8 @@ function atualizarResumo(){
   const resumo = document.getElementById('resumo'), btn = document.getElementById('btn-enviar');
   const total = copos.reduce((t, c) => t + precoCopo(c), 0);
   document.getElementById('total').textContent = reais(total);
-  document.getElementById('total-barra').textContent = reais(total);
+  const tb = document.getElementById('total-barra');
+  if(tb.textContent !== reais(total)){ tb.textContent = reais(total); tb.classList.remove('bump'); void tb.offsetWidth; tb.classList.add('bump'); }
   document.getElementById('btn-add').disabled = !copoAtual();
   if(!copos.length){
     resumo.innerHTML = '<p style="font-style:italic">Escolha o sabor e o tamanho para começar...</p>';
@@ -1051,6 +1077,7 @@ window.addEventListener('pageshow', e => { if(e.persisted) voltouAoSite(); });
 
 // ===== INICIALIZA =====
 carregarCliente();
+adicionarSelos(); parseEmoji();
 mostrarBtnRepetir();
 contarVisita();
 aplicarDisponibilidade();
