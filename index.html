@@ -899,6 +899,8 @@ function atualizarResumo(){
 }
 
 // ===== WHATSAPP =====
+// o WhatsApp não tem tamanho de letra; letras de largura total (ＣＯＰＯ １) aparecem maiores, como um subtítulo
+const larga = t => t.replace(/[A-Z0-9]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0xFEE0));
 async function enviarWhatsApp(){
   atualizarResumo();
   const btnEnv = document.getElementById('btn-enviar');
@@ -910,9 +912,10 @@ async function enviarWhatsApp(){
   const numero = await proximoNumeroPedido();
   const L = ['◆ PEDIDO ' + B('#' + numero) + ' DE ' + B(nomeCliente)];
   copos.forEach((c, i) => {
-    if(copos.length > 1) L.push('◆ ' + B('COPO ' + (i + 1)));
-    L.push(...linhasCopo(c, B));
+    // cada copo vira um bloco só (linhas coladas); a linha em branco fica entre um copo e outro
+    L.push([B(larga('COPO ' + (i + 1))) + ' ━━━━━━━━━━▶', ...linhasCopo(c, B)].filter(Boolean).join('\n'));
   });
+  L.push('━━━━━━━━━━━━━━━━━━━━'); // separa os copos da parte de entrega e pagamento
   L.push('◆ Recebimento: ' + B(formaRecebimento));
   if(textoTempo()) L.push('◆ Tempo estimado: ' + B(textoTempo()));
   if(d.entrega) L.push('◆ Endereço: ' + B(d.end));
