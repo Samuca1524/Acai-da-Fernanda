@@ -400,6 +400,16 @@ async function proximoNumeroPedido(){
   try{ localStorage.setItem(k, n); }catch(e){}
   return String(n);
 }
+async function zerarVisitas(){
+  if(!FIREBASE_URL) return;
+  if(!confirm('Zerar as visitas de hoje? Os pedidos não são afetados.')) return;
+  try{
+    const r = await fetch(FIREBASE_URL + '/disp_acai/visitas/' + diaBR() + '.json', { method: 'PUT', body: '0' });
+    if(!r.ok) throw new Error(r.status);
+    sessionStorage.setItem('visita', '1'); // esta visita (a sua) não volta a contar
+    atualizarPedidosHoje();
+  }catch(e){ alert('Não foi possível zerar agora. Tente de novo.'); }
+}
 async function atualizarPedidosHoje(){
   const el = document.getElementById('pedidos-hoje'); if(!el) return;
   const [ano, mes, dia] = diaBR().split('-');
@@ -573,7 +583,7 @@ function montarBotoesControle(){
   html += `<p style="font-weight:700;color:#FACC15;margin:14px 0 4px;font-size:13px">Tempo estimado</p><div style="display:flex;gap:6px;flex-wrap:wrap"><label style="font-size:11px">Entrega<br><input id="tp-e" value="${tpo.e}" style="width:130px;padding:6px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700"></label><label style="font-size:11px">Retirada<br><input id="tp-r" value="${tpo.r}" style="width:130px;padding:6px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700"></label></div><button class="btn-ctrl ok" style="width:100%;padding:12px;margin-top:10px" onclick="salvarTempos()">💾 Salvar tempos</button>`;
   const pex = precoExtra();
   html += `<p style="font-weight:700;color:#FACC15;margin:14px 0 4px;font-size:13px">Preço de cada extra (R$)</p><div style="display:flex;gap:6px;flex-wrap:wrap"><label style="font-size:11px">Fruta extra<br><input id="ex-f" type="number" step="0.5" min="0" value="${pex.f}" style="width:80px;padding:6px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700"></label><label style="font-size:11px">Acomp. extra<br><input id="ex-a" type="number" step="0.5" min="0" value="${pex.a}" style="width:80px;padding:6px;border-radius:8px;border:1px solid #7B2CBF;background:#4A1599;color:#FACC15;font-weight:700"></label></div><button class="btn-ctrl ok" style="width:100%;padding:12px;margin-top:10px" onclick="salvarExtras()">💾 Salvar extras</button>`;
-  html = `<p id=\"pedidos-hoje\" style=\"font-weight:700;color:#2D0C5E;background:#FACC15;border-radius:10px;padding:8px 12px;margin:0 0 8px;font-size:15px\">Pedidos de hoje: ...</p>` + html;
+  html = `<p id=\"pedidos-hoje\" style=\"font-weight:700;color:#2D0C5E;background:#FACC15;border-radius:10px;padding:8px 12px;margin:0 0 8px;font-size:15px\">Pedidos de hoje: ...</p>` + `<button class="btn-ctrl off" style="width:100%;padding:10px;margin:0 0 8px;font-size:13px" onclick="zerarVisitas()">🔄 Zerar visitas de hoje</button>` + html;
   container.innerHTML = html;
   atualizarPedidosHoje();
 }
