@@ -361,6 +361,7 @@ function alternarPainel(){
   p.classList.toggle('aberto');
   if(p.classList.contains('aberto')){
     try{ localStorage.setItem('equipe_acai', '1'); }catch(e){} // aparelho da equipe: as próximas visitas dele não entram na contagem
+    removerMinhaVisita();
     atualizarPedidosHoje(); atualizarMaisPedidos();
   }
 }
@@ -425,13 +426,24 @@ async function atualizarMaisPedidos(){
       }).join('');
   }catch(e){}
 }
+async function removerMinhaVisita(){ // quem abre o painel é da equipe: a visita que ele acabou de fazer sai da contagem
+  const dia = sessionStorage.getItem('visita_contada');
+  if(!FIREBASE_URL || !dia) return;
+  sessionStorage.removeItem('visita_contada'); // só tira uma vez
+  try{
+    const url = FIREBASE_URL + '/disp_acai/visitas/' + dia + '.json';
+    const atual = await (await fetch(url)).json();
+    if(typeof atual === 'number' && atual > 0) await fetch(url, { method: 'PUT', body: JSON.stringify({ '.sv': { increment: -1 } }) });
+  }catch(e){}
+  atualizarPedidosHoje();
+}
 async function zerarVisitas(){
   if(!FIREBASE_URL) return;
   if(!confirm('Zerar as visitas de hoje? Os pedidos não são afetados.')) return;
   try{
     const r = await fetch(FIREBASE_URL + '/disp_acai/visitas/' + diaBR() + '.json', { method: 'PUT', body: '0' });
     if(!r.ok) throw new Error(r.status);
-    sessionStorage.setItem('visita', '1'); // esta visita (a sua) não volta a contar
+    sessionStorage.setItem('visita', '1'); sessionStorage.removeItem('visita_contada'); // zerar já levou a sua visita embora
     atualizarPedidosHoje();
   }catch(e){ alert('Não foi possível zerar agora. Tente de novo.'); }
 }
@@ -789,7 +801,10 @@ if(GOOGLE_AVALIACAO){ document.getElementById('a-google').href = GOOGLE_AVALIACA
 async function contarVisita(){
   if(!FIREBASE_URL || sessionStorage.getItem('visita') || localStorage.getItem('equipe_acai')) return;
   sessionStorage.setItem('visita', '1');
-  try{ await fetch(FIREBASE_URL + '/disp_acai/visitas/' + diaBR() + '.json', { method: 'PUT', body: JSON.stringify({ '.sv': { increment: 1 } }) }); }catch(e){}
+  try{
+    const r = await fetch(FIREBASE_URL + '/disp_acai/visitas/' + diaBR() + '.json', { method: 'PUT', body: JSON.stringify({ '.sv': { increment: 1 } }) });
+    if(r.ok) sessionStorage.setItem('visita_contada', diaBR()); // guarda o dia, para poder desfazer se for da equipe
+  }catch(e){}
 }
 
 // ===== TEMPO ESTIMADO (editável no painel) =====
