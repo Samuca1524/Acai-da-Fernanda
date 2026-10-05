@@ -298,6 +298,9 @@ tailwind.config = {
   </div>
     <div class="sub" id="bloco-endereco" style="display:none">
     <h3 class="titulo sub-titulo">Endereço de Entrega</h3>
+    <input class="campo-nome" id="end-cep" inputmode="numeric" maxlength="9" autocomplete="postal-code" placeholder="CEP (só números)" oninput="aoDigitarCep()" style="margin-bottom:6px">
+    <p id="cep-status" style="font-size:13px;margin:0 0 10px">Digite o CEP e preenchemos a rua e o bairro</p>
+    <input type="hidden" id="end-cidade"><input type="hidden" id="end-uf">
     <input class="campo-nome" id="end-rua" placeholder="Rua / Avenida" oninput="atualizarResumo()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-num" placeholder="Número" oninput="atualizarResumo()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-bairro" placeholder="Bairro" oninput="atualizarResumo()" style="margin-bottom:10px">
@@ -524,7 +527,7 @@ function salvarPrecos(){
 }
 
 // ===== LEMBRAR NOME E ENDEREÇO DO CLIENTE =====
-const CAMPOS_CLIENTE = ['nome-cliente', 'end-rua', 'end-num', 'end-bairro', 'end-comp'];
+const CAMPOS_CLIENTE = ['nome-cliente', 'end-cep', 'end-cidade', 'end-uf', 'end-rua', 'end-num', 'end-bairro', 'end-comp'];
 let clienteCarregado = false;
 function carregarCliente(){
   try{
@@ -923,15 +926,41 @@ function novoCopo(){
   atualizarResumo();
 }
 function removerCopo(i){ rascunhoBloqueado = false; carrinho.splice(i, 1); atualizarResumo(); }
+// ===== CEP: preenche rua e bairro sozinho (ViaCEP) =====
+async function aoDigitarCep(){
+  const el = document.getElementById('end-cep'), st = document.getElementById('cep-status');
+  const d = el.value.replace(/\D/g, '').slice(0, 8);
+  el.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;
+  if(d.length < 8){ st.textContent = 'Digite o CEP e preenchemos a rua e o bairro'; atualizarResumo(); return; }
+  st.textContent = 'Buscando endereço...';
+  try{
+    const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 6000);
+    const r = await (await fetch('https://viacep.com.br/ws/' + d + '/json/', { signal: ctrl.signal })).json();
+    clearTimeout(t);
+    if(el.value.replace(/\D/g, '') !== d) return; // digitou outro CEP enquanto buscava
+    if(r.erro){ st.textContent = 'CEP não encontrado. Confira ou preencha rua e bairro.'; }
+    else{
+      if(r.logradouro) document.getElementById('end-rua').value = r.logradouro;
+      if(r.bairro) document.getElementById('end-bairro').value = r.bairro;
+      document.getElementById('end-cidade').value = r.localidade || ''; document.getElementById('end-uf').value = r.uf || '';
+      st.textContent = '✓ ' + (r.localidade || '') + ' - ' + (r.uf || '') + ' • agora digite o número';
+      document.getElementById('end-num').focus();
+    }
+  }catch(e){ st.textContent = 'Não consegui buscar o CEP agora. Preencha rua e bairro.'; }
+  atualizarResumo();
+}
 function dadosPedido(){
   const rec = document.querySelector('input[name="recebimento"]:checked');
   const pag = document.querySelector('input[name="pagamento"]:checked');
   formaRecebimento = rec ? rec.value : ''; formaPagamento = pag ? pag.value : ''; nomeCliente = val('nome-cliente');
   const entrega = formaRecebimento === 'Entrega';
   document.getElementById('bloco-endereco').style.display = entrega ? 'block' : 'none';
-  const end = entrega ? val('end-rua') + ', ' + val('end-num') + ' - ' + val('end-bairro') + (val('end-comp') ? ' (' + val('end-comp') + ')' : '') : '';
-  const endOk = !entrega || (val('end-rua') && val('end-num') && val('end-bairro'));
-  return { entrega, end, endOk, obs: val('obs') };
+  const cep = val('end-cep'), cidade = val('end-cidade'), uf = val('end-uf');
+  const end = entrega ? val('end-rua') + ', ' + val('end-num') + ' - ' + val('end-bairro') + (val('end-comp') ? ' (' + val('end-comp') + ')' : '') + (cep ? ' • CEP ' + cep : '') : '';
+  const endOk = !entrega || (cep.replace(/\D/g, '').length === 8 && val('end-rua') && val('end-num') && val('end-bairro'));
+  // link do Google Maps: no WhatsApp ele vira um link que abre o endereço (e a rota) com um toque
+  const mapa = entrega && endOk ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([val('end-rua') + ', ' + val('end-num'), val('end-bairro'), cidade && uf ? cidade + ' - ' + uf : cidade, cep, 'Brasil'].filter(Boolean).join(', ')) : '';
+  return { entrega, end, endOk, mapa, obs: val('obs') };
 }
 function atualizarResumo(){
   aplicarSoRetirada();
@@ -1000,6 +1029,7 @@ async function enviarWhatsApp(){
   });
   const rodape = ['━━━━━━━━━━━━━━━━━━━━'];
   if(d.entrega) rodape.push('📍 ' + B(d.end));
+  if(d.mapa) rodape.push('🗺️ Abrir no mapa: ' + d.mapa);
   if(textoTempo()) rodape.push('⏱ Tempo estimado: ' + B(textoTempo()));
   if(d.obs) rodape.push('⚠️ ' + B('OBSERVAÇÃO:') + ' ' + d.obs);
   rodape.push('💰 ' + B('TOTAL: ' + reais(total)) + ' (' + formaPagamento + ')');
