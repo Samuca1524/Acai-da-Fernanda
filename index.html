@@ -1028,13 +1028,12 @@ async function enviarWhatsApp(){
     L.push([titulo, ...linhas].join('\n'));
   });
   const rodape = ['━━━━━━━━━━━━━━━━━━━━'];
-  if(d.entrega) rodape.push('📍 ' + B(d.end));
-  if(d.mapa) rodape.push('🗺️ Abrir no mapa: ' + d.mapa);
+  if(d.entrega) rodape.push('📍 Endereço: ' + d.mapa); // só o link do Google Maps (o WhatsApp deixa clicável)
   if(textoTempo()) rodape.push('⏱ Tempo estimado: ' + B(textoTempo()));
   if(d.obs) rodape.push('⚠️ ' + B('OBSERVAÇÃO:') + ' ' + d.obs);
   rodape.push('💰 ' + B('TOTAL: ' + reais(total)) + ' (' + formaPagamento + ')');
   L.push(rodape.join('\n'));
-  const url = 'https://wa.me/5511979908372?text=' + encodeURIComponent(L.join('\n\n'));
+  const url = 'https://api.whatsapp.com/send?phone=5511979908372&text=' + encodeURIComponent(L.join('\n\n'));
   try{ localStorage.setItem('ultimo_pedido_acai', JSON.stringify(copos)); }catch(e){} // guarda para o botão "Repetir meu último pedido"
   mostrarBtnRepetir();
   registrarMaisPedidos(copos);
