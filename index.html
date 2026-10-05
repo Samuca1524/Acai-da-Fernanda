@@ -960,7 +960,7 @@ function dadosPedido(){
   const endOk = !entrega || (cep.replace(/\D/g, '').length === 8 && val('end-rua') && val('end-num') && val('end-bairro'));
   // link do Google Maps: no WhatsApp ele vira um link que abre o endereço (e a rota) com um toque
   const mapa = entrega && endOk ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([val('end-rua') + ', ' + val('end-num'), val('end-bairro'), cidade && uf ? cidade + ' - ' + uf : cidade, cep, 'Brasil'].filter(Boolean).join(', ')) : '';
-  return { entrega, end, endOk, mapa, obs: val('obs') };
+  return { entrega, end, endOk, mapa, comp: val('end-comp'), obs: val('obs') };
 }
 function atualizarResumo(){
   aplicarSoRetirada();
@@ -1029,6 +1029,7 @@ async function enviarWhatsApp(){
   });
   const rodape = ['━━━━━━━━━━━━━━━━━━━━'];
   if(d.entrega) rodape.push('📍 Endereço: ' + d.mapa); // só o link do Google Maps (o WhatsApp deixa clicável)
+  if(d.entrega && d.comp) rodape.push('🏠 ' + B('Complemento:') + ' ' + d.comp); // só aparece quando o cliente preenche
   if(textoTempo()) rodape.push('⏱ Tempo estimado: ' + B(textoTempo()));
   if(d.obs) rodape.push('⚠️ ' + B('OBSERVAÇÃO:') + ' ' + d.obs);
   rodape.push('💰 ' + B('TOTAL: ' + reais(total)) + ' (' + formaPagamento + ')');
