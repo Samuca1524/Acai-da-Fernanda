@@ -303,15 +303,17 @@ tailwind.config = {
     <p id="cep-status" style="font-size:13px;margin:0 0 10px">Digite o CEP, ou o nome da rua que a gente encontra o CEP para você</p>
     <div id="mapa-prev" style="display:none;margin:0 0 12px">
       <iframe title="Mapa do local" style="width:100%;height:200px;border:2px solid #FACC15;border-radius:12px;background:#fff"></iframe>
-      <p style="font-size:13px;margin:6px 0"><strong>O pino no mapa é o local da entrega?</strong></p>
-      <div style="display:flex;gap:8px"><button type="button" class="btn-add" style="margin:0;padding:10px;font-size:14px" onclick="confirmarLocal(true)">✅ Sim, é aqui</button><button type="button" class="btn-add" style="margin:0;padding:10px;font-size:14px" onclick="confirmarLocal(false)">❌ Não é aqui</button></div>
+      <div id="mapa-acoes"><p style="font-size:13px;margin:6px 0"><strong>O pino no mapa é o local da entrega?</strong></p>
+      <div style="display:flex;gap:8px"><button type="button" class="btn-add" style="margin:0;padding:10px;font-size:14px" onclick="confirmarLocal(true)">✅ Sim, é aqui</button><button type="button" class="btn-add" style="margin:0;padding:10px;font-size:14px" onclick="confirmarLocal(false)">❌ Não é aqui</button></div></div>
+      <p id="mapa-ok" style="display:none;margin:8px 0 0;font-weight:700">✅ Local confirmado no mapa</p>
     </div>
-    <input type="hidden" id="end-cidade"><input type="hidden" id="end-uf"><input type="hidden" id="end-lat"><input type="hidden" id="end-lng"><input type="hidden" id="end-conf">
+    <input type="hidden" id="end-cidade"><input type="hidden" id="end-uf"><input type="hidden" id="end-lat"><input type="hidden" id="end-lng"><input type="hidden" id="end-conf"><input type="hidden" id="end-ok">
     <input class="campo-nome" id="end-rua" placeholder="Rua / Avenida" oninput="aoDigitarRua()" onblur="buscarCepPorRua()" style="margin-bottom:10px">
     <select class="campo-nome" id="cep-opcoes" onchange="escolherCep(this.value)" style="display:none;margin-bottom:10px"></select>
     <input class="campo-nome" id="end-num" placeholder="Número" oninput="aoMudarEndereco()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-bairro" placeholder="Bairro" oninput="aoMudarEndereco()" style="margin-bottom:10px">
-    <input class="campo-nome" id="end-comp" placeholder="Complemento / referência (opcional)" oninput="atualizarResumo()">
+    <input class="campo-nome" id="end-comp" placeholder="Complemento / referência (opcional)" oninput="aoMudarEndereco()">
+    <div id="conf-end" style="display:none;margin-top:14px;padding:12px;border:2px solid #FACC15;border-radius:12px;font-size:14px"></div>
   </div>
     <div class="sub">
     <h3 class="titulo sub-titulo">Forma de Pagamento</h3>
@@ -949,12 +951,12 @@ function faixaTem(c, n){ // a faixa de números do CEP (ex.: "de 1 a 99 - lado �
   return null;
 }
 function aoDigitarRua(){
-  limparLocalizacao();
+  limparLocalizacao(); resetConfEndereco();
   atualizarResumo(); clearTimeout(buscaRuaT);
   if(val('end-cep').replace(/\D/g, '').length === 8 && !cepAuto) return; // quem digitou o CEP não precisa da busca
   if(val('end-rua').length >= 3) buscaRuaT = setTimeout(buscarCepPorRua, 250); // espera só 0,25 s depois da última letra
 }
-function aoMudarEndereco(){ atualizarResumo(); if(ceps.length > 1 && (cepAuto || val('end-cep').replace(/\D/g, '').length < 8)) escolherPorFiltro(); }
+function aoMudarEndereco(){ resetConfEndereco(); atualizarResumo(); if(ceps.length > 1 && (cepAuto || val('end-cep').replace(/\D/g, '').length < 8)) escolherPorFiltro(); }
 async function buscarCepPorRua(){
   const rua = val('end-rua'), st = document.getElementById('cep-status');
   if(rua.length < 3 || (val('end-cep').replace(/\D/g, '').length === 8 && !cepAuto)) return;
@@ -984,7 +986,7 @@ function escolherPorFiltro(){
 }
 function escolherCep(i){ if(i === '') return; document.getElementById('cep-opcoes').style.display = 'none'; usarCep(ceps[+i]); }
 function usarCep(x){
-  cepAuto = true;
+  cepAuto = true; resetConfEndereco();
   document.getElementById('end-cep').value = x.cep;
   if(x.logradouro) document.getElementById('end-rua').value = x.logradouro;
   if(x.bairro) document.getElementById('end-bairro').value = x.bairro;
@@ -993,14 +995,25 @@ function usarCep(x){
   atualizarResumo();
 }
 // ===== COMPARTILHAR A LOCALIZAÇÃO DO TELEFONE =====
+function resetConfEndereco(){ document.getElementById('end-ok').value = ''; }
+function confirmarEndereco(){ document.getElementById('end-ok').value = '1'; atualizarResumo(); }
+function atualizarConfEndereco(d){ // caixa final: o cliente confirma o endereço escrito antes de poder enviar
+  const box = document.getElementById('conf-end');
+  if(!d.entrega || !d.camposOk || d.confPend){ box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = d.confOk
+    ? '✅ <strong>Endereço confirmado</strong><br><span style="font-size:13px">' + esc(d.end) + '</span>'
+    : '<strong>Confirme o endereço de entrega:</strong><br>' + esc(d.end) + '<br><button type="button" class="btn-add" style="margin:10px 0 0;padding:10px;font-size:14px" onclick="confirmarEndereco()">✅ Está certo, confirmar</button>';
+}
 function limparLocalizacao(){
   ['end-lat', 'end-lng', 'end-conf'].forEach(i => { document.getElementById(i).value = ''; });
   document.getElementById('mapa-prev').style.display = 'none';
+  document.getElementById('mapa-acoes').style.display = 'block'; document.getElementById('mapa-ok').style.display = 'none';
 }
 function confirmarLocal(ok){
   const st = document.getElementById('cep-status');
-  if(ok){ document.getElementById('end-conf').value = '1'; st.textContent = '✓ Local confirmado no mapa. Confira o CEP e o número.'; }
-  else { limparLocalizacao(); st.textContent = 'Tudo bem! Digite o CEP ou o nome da rua.'; }
+  if(ok){ document.getElementById('end-conf').value = '1'; document.getElementById('mapa-acoes').style.display = 'none'; document.getElementById('mapa-ok').style.display = 'block'; st.textContent = '✓ Local confirmado. Confira o CEP e digite o número.'; }
+  else { limparLocalizacao(); resetConfEndereco(); st.textContent = 'Tudo bem! Digite o CEP ou o nome da rua.'; }
   atualizarResumo();
 }
 function usarMinhaLocalizacao(){
@@ -1029,7 +1042,7 @@ async function aplicarLocalizacao(pos){
     return;
   }
   const lat = pos.coords.latitude.toFixed(6), lng = pos.coords.longitude.toFixed(6);
-  $('end-lat').value = lat; $('end-lng').value = lng; $('end-conf').value = '';
+  $('end-lat').value = lat; $('end-lng').value = lng; $('end-conf').value = ''; resetConfEndereco();
   const d = 0.0015; // mapa para o cliente conferir o pino
   $('mapa-prev').style.display = 'block';
   $('mapa-prev').querySelector('iframe').src = 'https://www.openstreetmap.org/export/embed.html?bbox=' + [(+lng - 0.002), (+lat - d), (+lng + 0.002), (+lat + d)].join('%2C') + '&layer=mapnik&marker=' + lat + '%2C' + lng;
@@ -1053,7 +1066,7 @@ async function aplicarLocalizacao(pos){
 async function aoDigitarCep(){
   const el = document.getElementById('end-cep'), st = document.getElementById('cep-status');
   cepAuto = false; document.getElementById('cep-opcoes').style.display = 'none';
-  limparLocalizacao();
+  limparLocalizacao(); resetConfEndereco();
   const d = el.value.replace(/\D/g, '').slice(0, 8);
   el.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;
   if(d.length < 8){ st.textContent = 'Digite o CEP, ou o nome da rua que a gente encontra o CEP para você'; atualizarResumo(); return; }
@@ -1083,17 +1096,18 @@ function dadosPedido(){
   const cep = val('end-cep'), cidade = val('end-cidade'), uf = val('end-uf');
   const end = entrega ? val('end-rua') + ', ' + val('end-num') + ' - ' + val('end-bairro') + (val('end-comp') ? ' (' + val('end-comp') + ')' : '') + (cep ? ' • CEP ' + cep : '') : '';
   const confPend = !!(val('end-lat') && val('end-lng') && val('end-conf') !== '1'); // localização pedida mas o cliente ainda não confirmou o pino
-  const endOk = !entrega || (cep.replace(/\D/g, '').length === 8 && val('end-rua') && val('end-num') && val('end-bairro') && !confPend);
+  const camposOk = !!(cep.replace(/\D/g, '').length === 8 && val('end-rua') && val('end-num') && val('end-bairro')), confOk = val('end-ok') === '1';
+  const endOk = !entrega || (camposOk && !confPend && confOk); // só envia com o endereço confirmado pelo cliente
   // link do Google Maps: no WhatsApp ele vira um link que abre o endereço (e a rota) com um toque
   const lat = val('end-lat'), lng = val('end-lng');
   const mapa = entrega && endOk ? (lat && lng ? 'https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([val('end-rua') + ', ' + val('end-num'), val('end-bairro'), cidade && uf ? cidade + ' - ' + uf : cidade, cep, 'Brasil'].filter(Boolean).join(', '))) : '';
-  return { entrega, end, endOk, confPend, gps: !!(val('end-lat') && val('end-lng')), mapa, comp: val('end-comp'), obs: val('obs') };
+  return { entrega, end, endOk, confPend, camposOk, confOk, gps: !!(val('end-lat') && val('end-lng')), mapa, comp: val('end-comp'), obs: val('obs') };
 }
 function atualizarResumo(){
   aplicarSoRetirada();
   salvarCliente();
   atualizarVisualAdicional();
-  const d = dadosPedido(), copos = todosCopos(); // dadosPedido() atualiza entrega/pagamento/nome: o que depende deles vem depois
+  const d = dadosPedido(), copos = todosCopos(); atualizarConfEndereco(d); // dadosPedido() atualiza entrega/pagamento/nome: o que depende deles vem depois
   atualizarTempo();
   salvarRascunho();
   const resumo = document.getElementById('resumo'), btn = document.getElementById('btn-enviar');
@@ -1124,7 +1138,7 @@ function atualizarResumo(){
   if(d.obs) h += '<p>◆ Observações: ' + B(d.obs) + '</p>';
   h += '<p>◆ Nome: ' + (nomeCliente ? B(nomeCliente) : 'Ainda não informado') + '</p>';
   resumo.innerHTML = h;
-  const falta = !formaRecebimento ? 'Escolha entrega ou retirada' : !d.endOk ? (d.confPend ? 'Confirme o local no mapa' : 'Preencha o endereço') : !formaPagamento ? 'Escolha a forma de pagamento' : !nomeCliente ? 'Digite seu nome' : '';
+  const falta = !formaRecebimento ? 'Escolha entrega ou retirada' : !d.endOk ? (d.confPend ? 'Confirme o local no mapa' : d.camposOk ? 'Confirme o endereço' : 'Preencha o endereço') : !formaPagamento ? 'Escolha a forma de pagamento' : !nomeCliente ? 'Digite seu nome' : '';
   btn.disabled = !!falta; btn.className = 'btn-enviar ' + (falta ? 'travado' : 'liberado');
   btn.innerHTML = '<i class="fa fa-whatsapp"></i> ' + (falta || 'Enviar Pedido no WhatsApp');
   aplicarLoja();
@@ -1264,7 +1278,7 @@ document.addEventListener('freeze', () => salvarRascunho(true));
 // ===== DEPOIS DE ENVIAR: quando o cliente voltar para o site/app, o pedido recomeça do zero =====
 let pedidoEnviado = false;
 function reiniciarPedido(){
-  carrinho = [];
+  carrinho = []; resetConfEndereco(); limparLocalizacao();
   document.querySelectorAll('input[name="sabor"], input[name="recebimento"], input[name="pagamento"]').forEach(i => { i.checked = false; i.closest('.opcao').classList.remove('selecionado'); });
   atualizarSabor();                       // zera tamanho, frutas, acompanhamentos, coberturas e adicional
   trocarAba('tradicional'); trocarAbaFA('fr');
