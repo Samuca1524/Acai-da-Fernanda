@@ -298,12 +298,19 @@ tailwind.config = {
   </div>
     <div class="sub" id="bloco-endereco" style="display:none">
     <h3 class="titulo sub-titulo">Endereço de Entrega</h3>
+    <button type="button" class="btn-add" style="margin:0 0 12px;padding:12px;font-size:15px" onclick="usarMinhaLocalizacao()">📍 Usar minha localização</button>
     <input class="campo-nome" id="end-cep" inputmode="numeric" maxlength="9" autocomplete="postal-code" placeholder="CEP (só números)" oninput="aoDigitarCep()" style="margin-bottom:6px">
-    <p id="cep-status" style="font-size:13px;margin:0 0 10px">Digite o CEP e preenchemos a rua e o bairro</p>
-    <input type="hidden" id="end-cidade"><input type="hidden" id="end-uf">
-    <input class="campo-nome" id="end-rua" placeholder="Rua / Avenida" oninput="atualizarResumo()" style="margin-bottom:10px">
-    <input class="campo-nome" id="end-num" placeholder="Número" oninput="atualizarResumo()" style="margin-bottom:10px">
-    <input class="campo-nome" id="end-bairro" placeholder="Bairro" oninput="atualizarResumo()" style="margin-bottom:10px">
+    <p id="cep-status" style="font-size:13px;margin:0 0 10px">Digite o CEP, ou o nome da rua que a gente encontra o CEP para você</p>
+    <div id="mapa-prev" style="display:none;margin:0 0 12px">
+      <iframe title="Mapa do local" style="width:100%;height:200px;border:2px solid #FACC15;border-radius:12px;background:#fff"></iframe>
+      <p style="font-size:13px;margin:6px 0"><strong>O pino no mapa é o local da entrega?</strong></p>
+      <div style="display:flex;gap:8px"><button type="button" class="btn-add" style="margin:0;padding:10px;font-size:14px" onclick="confirmarLocal(true)">✅ Sim, é aqui</button><button type="button" class="btn-add" style="margin:0;padding:10px;font-size:14px" onclick="confirmarLocal(false)">❌ Não é aqui</button></div>
+    </div>
+    <input type="hidden" id="end-cidade"><input type="hidden" id="end-uf"><input type="hidden" id="end-lat"><input type="hidden" id="end-lng"><input type="hidden" id="end-conf">
+    <input class="campo-nome" id="end-rua" placeholder="Rua / Avenida" oninput="aoDigitarRua()" onblur="buscarCepPorRua()" style="margin-bottom:10px">
+    <select class="campo-nome" id="cep-opcoes" onchange="escolherCep(this.value)" style="display:none;margin-bottom:10px"></select>
+    <input class="campo-nome" id="end-num" placeholder="Número" oninput="aoMudarEndereco()" style="margin-bottom:10px">
+    <input class="campo-nome" id="end-bairro" placeholder="Bairro" oninput="aoMudarEndereco()" style="margin-bottom:10px">
     <input class="campo-nome" id="end-comp" placeholder="Complemento / referência (opcional)" oninput="atualizarResumo()">
   </div>
     <div class="sub">
@@ -927,11 +934,129 @@ function novoCopo(){
 }
 function removerCopo(i){ rascunhoBloqueado = false; carrinho.splice(i, 1); atualizarResumo(); }
 // ===== CEP: preenche rua e bairro sozinho (ViaCEP) =====
+// ===== ACHAR O CEP PELO NOME DA RUA (ViaCEP) =====
+let ceps = [], cepAuto = false, buscaRuaT = null, bairroDica = '';
+const cacheRuas = {}; // ruas já procuradas: aparecem na hora
+const semAcento = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+function faixaTem(c, n){ // a faixa de números do CEP (ex.: "de 1 a 99 - lado ímpar") inclui o número n? true / false / null (não dá para saber)
+  const t = semAcento(c); if(!t) return null;
+  if(t.includes('lado par') && n % 2 !== 0) return false;
+  if(t.includes('lado impar') && n % 2 !== 1) return false;
+  let m;
+  if((m = t.match(/de (\d+)(?:\/\d+)? a (\d+)/))) return n >= +m[1] && n <= +m[2];
+  if((m = t.match(/de (\d+)(?:\/\d+)? ao fim/))) return n >= +m[1];
+  if((m = t.match(/ate (\d+)/))) return n <= +m[1];
+  return null;
+}
+function aoDigitarRua(){
+  limparLocalizacao();
+  atualizarResumo(); clearTimeout(buscaRuaT);
+  if(val('end-cep').replace(/\D/g, '').length === 8 && !cepAuto) return; // quem digitou o CEP não precisa da busca
+  if(val('end-rua').length >= 3) buscaRuaT = setTimeout(buscarCepPorRua, 250); // espera só 0,25 s depois da última letra
+}
+function aoMudarEndereco(){ atualizarResumo(); if(ceps.length > 1 && (cepAuto || val('end-cep').replace(/\D/g, '').length < 8)) escolherPorFiltro(); }
+async function buscarCepPorRua(){
+  const rua = val('end-rua'), st = document.getElementById('cep-status');
+  if(rua.length < 3 || (val('end-cep').replace(/\D/g, '').length === 8 && !cepAuto)) return;
+  const cidade = val('end-cidade') || 'Itaquaquecetuba', uf = val('end-uf') || 'SP';
+  const chave = semAcento(uf + '|' + cidade + '|' + rua);
+  if(cacheRuas[chave]){ ceps = cacheRuas[chave]; escolherPorFiltro(); return; }
+  st.textContent = 'Procurando o CEP da rua em ' + cidade + '...';
+  try{
+    const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 5000);
+    const lista = await (await fetch('https://viacep.com.br/ws/' + encodeURIComponent(uf) + '/' + encodeURIComponent(cidade) + '/' + encodeURIComponent(rua) + '/json/', { signal: ctrl.signal })).json();
+    clearTimeout(t);
+    if(val('end-rua') !== rua) return; // continuou digitando
+    ceps = Array.isArray(lista) ? lista : []; cacheRuas[chave] = ceps;
+    escolherPorFiltro();
+  }catch(e){ st.textContent = 'Não consegui procurar o CEP agora. Digite o CEP, se souber.'; }
+}
+function escolherPorFiltro(){
+  const st = document.getElementById('cep-status'), sel = document.getElementById('cep-opcoes');
+  if(!ceps.length){ sel.style.display = 'none'; st.textContent = 'Não achei o CEP dessa rua. Confira o nome ou digite o CEP.'; return; }
+  const b = semAcento(val('end-bairro') || bairroDica), n = parseInt(val('end-num'), 10);
+  let c = ceps.filter(x => !b || semAcento(x.bairro).includes(b) || b.includes(semAcento(x.bairro)));
+  if(!c.length) c = ceps;
+  if(!isNaN(n)){ const f = c.filter(x => faixaTem(x.complemento, n) === true), g = c.filter(x => faixaTem(x.complemento, n) !== false); c = f.length ? f : (g.length ? g : c); }
+  if(c.length === 1){ sel.style.display = 'none'; usarCep(c[0]); return; }
+  sel.innerHTML = '<option value="">Escolha o CEP da sua rua...</option>' + c.map(x => '<option value="' + ceps.indexOf(x) + '">' + esc(x.cep + ' • ' + x.bairro + (x.complemento ? ' • ' + x.complemento : '')) + '</option>').join('');
+  sel.style.display = 'block'; st.textContent = c.length + ' CEPs para essa rua: escolha o seu na lista';
+}
+function escolherCep(i){ if(i === '') return; document.getElementById('cep-opcoes').style.display = 'none'; usarCep(ceps[+i]); }
+function usarCep(x){
+  cepAuto = true;
+  document.getElementById('end-cep').value = x.cep;
+  if(x.logradouro) document.getElementById('end-rua').value = x.logradouro;
+  if(x.bairro) document.getElementById('end-bairro').value = x.bairro;
+  document.getElementById('end-cidade').value = x.localidade || ''; document.getElementById('end-uf').value = x.uf || '';
+  document.getElementById('cep-status').textContent = '✓ CEP ' + x.cep + ' • ' + (x.bairro || '') + ' — confira se está certo';
+  atualizarResumo();
+}
+// ===== COMPARTILHAR A LOCALIZAÇÃO DO TELEFONE =====
+function limparLocalizacao(){
+  ['end-lat', 'end-lng', 'end-conf'].forEach(i => { document.getElementById(i).value = ''; });
+  document.getElementById('mapa-prev').style.display = 'none';
+}
+function confirmarLocal(ok){
+  const st = document.getElementById('cep-status');
+  if(ok){ document.getElementById('end-conf').value = '1'; st.textContent = '✓ Local confirmado no mapa. Confira o CEP e o número.'; }
+  else { limparLocalizacao(); st.textContent = 'Tudo bem! Digite o CEP ou o nome da rua.'; }
+  atualizarResumo();
+}
+function usarMinhaLocalizacao(){
+  const st = document.getElementById('cep-status');
+  if(!navigator.geolocation){ st.textContent = 'Este aparelho não permite pegar a localização. Digite o CEP ou o nome da rua.'; return; }
+  limparLocalizacao();
+  st.textContent = 'Pegando a localização com a melhor precisão... (toque em "Permitir" e aguarde uns segundos)';
+  let melhor = null, fim = false, id, timer;
+  const terminar = () => { if(fim) return; fim = true; navigator.geolocation.clearWatch(id); clearTimeout(timer); if(melhor) aplicarLocalizacao(melhor); };
+  id = navigator.geolocation.watchPosition(pos => { // o GPS melhora a cada leitura: guarda a mais precisa
+    if(!melhor || pos.coords.accuracy < melhor.coords.accuracy) melhor = pos;
+    st.textContent = 'Melhorando a precisão... (erro atual: ' + Math.round(melhor.coords.accuracy) + ' m)';
+    if(melhor.coords.accuracy <= 20) terminar();
+  }, err => {
+    if(melhor) return terminar();
+    if(fim) return; fim = true; navigator.geolocation.clearWatch(id); clearTimeout(timer);
+    st.textContent = err.code === 1 ? 'Sem permissão para a localização. Digite o CEP ou o nome da rua.' : 'Não consegui pegar a localização. Digite o CEP ou o nome da rua.';
+  }, { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 });
+  timer = setTimeout(terminar, 8000);
+}
+async function aplicarLocalizacao(pos){
+  const st = document.getElementById('cep-status'), $ = id => document.getElementById(id);
+  const prec = Math.round(pos.coords.accuracy || 99999);
+  if(prec > 500){ // computador sem GPS: a posição vem do Wi-Fi/internet e erra por quarteirões
+    st.textContent = 'A localização deste aparelho é imprecisa (erro de cerca de ' + prec + ' m, comum em computador). Digite o CEP ou o nome da rua.';
+    return;
+  }
+  const lat = pos.coords.latitude.toFixed(6), lng = pos.coords.longitude.toFixed(6);
+  $('end-lat').value = lat; $('end-lng').value = lng; $('end-conf').value = '';
+  const d = 0.0015; // mapa para o cliente conferir o pino
+  $('mapa-prev').style.display = 'block';
+  $('mapa-prev').querySelector('iframe').src = 'https://www.openstreetmap.org/export/embed.html?bbox=' + [(+lng - 0.002), (+lat - d), (+lng + 0.002), (+lat + d)].join('%2C') + '&layer=mapnik&marker=' + lat + '%2C' + lng;
+  st.textContent = 'Localização encontrada (erro de cerca de ' + prec + ' m). Montando o endereço...';
+  try{
+    const r = await (await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&accept-language=pt-BR&lat=' + lat + '&lon=' + lng)).json();
+    const a = r.address || {};
+    const rua = a.road || a.pedestrian || a.residential || '', cidade = a.city || a.town || a.village || a.municipality || '';
+    const uf = (a['ISO3166-2-lvl4'] || '').split('-')[1] || '';
+    bairroDica = a.suburb || a.neighbourhood || a.quarter || a.city_district || ''; // só uma pista: o bairro oficial vem do CEP
+    if(rua) $('end-rua').value = rua;
+    $('end-bairro').value = ''; $('end-cep').value = '';
+    if(cidade) $('end-cidade').value = cidade; if(uf) $('end-uf').value = uf;
+    if(a.house_number) $('end-num').value = a.house_number;
+    cepAuto = true;
+    st.textContent = '✓ ' + (rua || 'Localização compartilhada') + (prec > 50 ? ' (localização aproximada)' : '') + ' — confirme o pino no mapa, o CEP e digite o número';
+    if(rua) buscarCepPorRua(); // o CEP e o bairro certos vêm dos Correios (ViaCEP)
+  }catch(e){ st.textContent = '✓ Localização compartilhada (não deu para montar o endereço escrito). Confirme o pino e preencha CEP, rua, número e bairro.'; }
+  atualizarResumo();
+}
 async function aoDigitarCep(){
   const el = document.getElementById('end-cep'), st = document.getElementById('cep-status');
+  cepAuto = false; document.getElementById('cep-opcoes').style.display = 'none';
+  limparLocalizacao();
   const d = el.value.replace(/\D/g, '').slice(0, 8);
   el.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;
-  if(d.length < 8){ st.textContent = 'Digite o CEP e preenchemos a rua e o bairro'; atualizarResumo(); return; }
+  if(d.length < 8){ st.textContent = 'Digite o CEP, ou o nome da rua que a gente encontra o CEP para você'; atualizarResumo(); return; }
   st.textContent = 'Buscando endereço...';
   try{
     const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 6000);
@@ -957,10 +1082,12 @@ function dadosPedido(){
   document.getElementById('bloco-endereco').style.display = entrega ? 'block' : 'none';
   const cep = val('end-cep'), cidade = val('end-cidade'), uf = val('end-uf');
   const end = entrega ? val('end-rua') + ', ' + val('end-num') + ' - ' + val('end-bairro') + (val('end-comp') ? ' (' + val('end-comp') + ')' : '') + (cep ? ' • CEP ' + cep : '') : '';
-  const endOk = !entrega || (cep.replace(/\D/g, '').length === 8 && val('end-rua') && val('end-num') && val('end-bairro'));
+  const confPend = !!(val('end-lat') && val('end-lng') && val('end-conf') !== '1'); // localização pedida mas o cliente ainda não confirmou o pino
+  const endOk = !entrega || (cep.replace(/\D/g, '').length === 8 && val('end-rua') && val('end-num') && val('end-bairro') && !confPend);
   // link do Google Maps: no WhatsApp ele vira um link que abre o endereço (e a rota) com um toque
-  const mapa = entrega && endOk ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([val('end-rua') + ', ' + val('end-num'), val('end-bairro'), cidade && uf ? cidade + ' - ' + uf : cidade, cep, 'Brasil'].filter(Boolean).join(', ')) : '';
-  return { entrega, end, endOk, mapa, comp: val('end-comp'), obs: val('obs') };
+  const lat = val('end-lat'), lng = val('end-lng');
+  const mapa = entrega && endOk ? (lat && lng ? 'https://www.google.com/maps/search/?api=1&query=' + lat + ',' + lng : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([val('end-rua') + ', ' + val('end-num'), val('end-bairro'), cidade && uf ? cidade + ' - ' + uf : cidade, cep, 'Brasil'].filter(Boolean).join(', '))) : '';
+  return { entrega, end, endOk, confPend, gps: !!(val('end-lat') && val('end-lng')), mapa, comp: val('end-comp'), obs: val('obs') };
 }
 function atualizarResumo(){
   aplicarSoRetirada();
@@ -997,7 +1124,7 @@ function atualizarResumo(){
   if(d.obs) h += '<p>◆ Observações: ' + B(d.obs) + '</p>';
   h += '<p>◆ Nome: ' + (nomeCliente ? B(nomeCliente) : 'Ainda não informado') + '</p>';
   resumo.innerHTML = h;
-  const falta = !formaRecebimento ? 'Escolha entrega ou retirada' : !d.endOk ? 'Preencha o endereço' : !formaPagamento ? 'Escolha a forma de pagamento' : !nomeCliente ? 'Digite seu nome' : '';
+  const falta = !formaRecebimento ? 'Escolha entrega ou retirada' : !d.endOk ? (d.confPend ? 'Confirme o local no mapa' : 'Preencha o endereço') : !formaPagamento ? 'Escolha a forma de pagamento' : !nomeCliente ? 'Digite seu nome' : '';
   btn.disabled = !!falta; btn.className = 'btn-enviar ' + (falta ? 'travado' : 'liberado');
   btn.innerHTML = '<i class="fa fa-whatsapp"></i> ' + (falta || 'Enviar Pedido no WhatsApp');
   aplicarLoja();
@@ -1029,6 +1156,7 @@ async function enviarWhatsApp(){
   });
   const rodape = ['━━━━━━━━━━━━━━━━━━━━'];
   if(d.entrega) rodape.push('📍 Endereço: ' + d.mapa); // só o link do Google Maps (o WhatsApp deixa clicável)
+  if(d.entrega && d.gps) rodape.push('📌 Pino do GPS do cliente (ele confirmou no mapa)');
   if(d.entrega && d.comp) rodape.push('🏠 ' + B('Complemento:') + ' ' + d.comp); // só aparece quando o cliente preenche
   if(textoTempo()) rodape.push('⏱ Tempo estimado: ' + B(textoTempo()));
   if(d.obs) rodape.push('⚠️ ' + B('OBSERVAÇÃO:') + ' ' + d.obs);
